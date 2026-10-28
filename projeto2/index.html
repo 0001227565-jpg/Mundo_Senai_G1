@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Subsea Expeditions | Cadastro para Mares Profundos</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fontes Google & Icons FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Three.js CDN para a Experiência 3D Submarina -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            abyss: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#020617',
+            },
+            purpleAbyss: {
+              400: '#c4b5fd',
+              500: '#a78bfa',
+              600: '#8b5cf6',
+              700: '#7c3aed',
+              800: '#6d28d9',
+              900: '#4c1d95',
+              950: '#1e0a45'
+            }
+          },
+          animation: {
+            'float-slow': 'float 4s ease-in-out infinite',
+            'pulse-biolum': 'pulseBiolum 3s infinite ease-in-out',
+            'shimmer': 'shimmer 3s infinite linear',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+              '50%': { transform: 'translateY(-10px) rotate(2deg)' },
+            },
+            pulseBiolum: {
+              '0%, 100%': { filter: 'drop-shadow(0 0 12px rgba(167, 139, 250, 0.7))' },
+              '50%': { filter: 'drop-shadow(0 0 26px rgba(56, 189, 248, 0.95))' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos Customizados e Glassmorphism Oceânico */
+    body {
+      background: radial-gradient(circle at 20% 20%, #1e0a45 0%, #0369a1 40%, #020617 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      touch-action: manipulation;
+      overflow-x: hidden;
+    }
+
+    /* Canvas de Peixes do Background */
+    #ocean-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(167, 139, 250, 0.25);
+    }
+
+    .glass-card-hover:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
+    }
+
+    .glass-input {
+      background: rgba(2, 6, 23, 0.75);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      color: #f8fafc;
+      transition: all 0.25s ease-in-out;
+      font-size: 16px; /* Evita zoom no iOS */
+    }
+
+    @media (min-width: 640px) {
+      .glass-input {
+        font-size: 0.875rem;
+      }
+    }
+
+    .glass-input:focus {
+      background: rgba(2, 6, 23, 0.95);
+      border-color: #38bdf8;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+      outline: none;
+    }
+
+    .glass-input.error {
+      border-color: #f43f5e !important;
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.5) !important;
+    }
+
+    /* Olhos e Animação do Mascote Cavalo Marinho */
+    .pupil {
+      transition: transform 0.04s linear;
+    }
+
+    /* Hologram Effect */
+    .hologram-overlay {
+      background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(56,189,248,0.15) 35%, rgba(167,139,250,0.25) 70%, rgba(255,255,255,0.2) 100%);
+      background-size: 200% 200%;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #6d28d9;
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="relative min-h-full flex flex-col justify-between p-3 sm:p-6 md:p-8 antialiased selection:bg-purpleAbyss-600 selection:text-white">
+
+  <!-- ================= CANVAS INTERATIVO DO OCEANO (PEIXES E BOLHAS) ================= -->
+  <canvas id="ocean-bg"></canvas>
+
+  <!-- ================= CANVAS PARA CELEBRAÇÃO/CONFETES ================= -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+  <!-- ================= MASCOTE CAVALO MARINHO ROXO "HIPPOCAMPUS" (POSIÇÃO EXATA top: 15px; right: 20px) ================= -->
+  <div id="seahorse-mascot-container" class="fixed top-[15px] right-[20px] z-50 flex flex-col items-end pointer-events-auto select-none">
+    
+    <!-- Balão de Fala do Cavalo Marinho -->
+    <div id="seahorse-bubble" class="bg-purpleAbyss-950/95 text-purpleAbyss-400 text-xs font-semibold px-3.5 py-2 rounded-2xl rounded-tr-none shadow-2xl border border-purpleAbyss-500/50 mb-1.5 max-w-[190px] sm:max-w-[230px] backdrop-blur-md transition-all duration-300 opacity-100 transform translate-y-0 text-right leading-tight">
+      <span id="seahorse-speech">Glub glub! Sou o **Hippo**! Pronto para explorar as profundezas oceânicas? 🌊</span>
+    </div>
+
+    <!-- Figura SVG do Cavalo Marinho com Olhos Interativos -->
+    <div class="relative group cursor-pointer animate-float-slow" onclick="triggerSeahorseInteraction()" title="Clique no Hippo!">
+      <svg id="seahorse-svg" class="w-20 h-20 sm:w-24 sm:h-24 animate-pulse-biolum transition-transform duration-200 active:scale-90" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        
+        <!-- Coroa do Cavalo Marinho -->
+        <path d="M52 22L44 8L58 16L66 4L72 16L84 8L78 22Z" fill="#f472b6" stroke="#4c1d95" stroke-width="1.5"/>
+        <circle cx="44" cy="8" r="2" fill="#38bdf8"/>
+        <circle cx="66" cy="4" r="2" fill="#38bdf8"/>
+        <circle cx="84" cy="8" r="2" fill="#38bdf8"/>
+
+        <!-- Cabeça e Focinho -->
+        <path d="M48 24C65 20 85 28 85 45C85 52 75 58 68 62L88 64C92 64 94 68 92 71C90 73 86 74 82 73L62 68C58 76 52 84 55 96C58 108 72 112 70 124C68 134 54 136 46 128C40 122 45 112 52 114C56 115 58 120 54 122C50 123 48 120 50 118" fill="url(#seahorse-grad)" stroke="#2e1065" stroke-width="2"/>
+
+        <!-- Barriguinha com Anéis Segmentados -->
+        <path d="M52 64C62 66 68 76 66 88C64 98 56 106 52 110" stroke="#f472b6" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+        <line x1="55" y1="72" x2="64" y2="74" stroke="#c4b5fd" stroke-width="2"/>
+        <line x1="56" y1="80" x2="65" y2="83" stroke="#c4b5fd" stroke-width="2"/>
+        <line x1="55" y1="88" x2="63" y2="92" stroke="#c4b5fd" stroke-width="2"/>
+        <line x1="53" y1="96" x2="60" y2="100" stroke="#c4b5fd" stroke-width="2"/>
+
+        <!-- Barbatanas Dorsais -->
+        <path d="M44 60C32 55 30 75 42 82Z" fill="#38bdf8" opacity="0.8" stroke="#0284c7" stroke-width="1.5"/>
+        <path d="M42 63L34 68M42 70L33 73M42 77L35 79" stroke="#ffffff" stroke-width="1"/>
+
+        <!-- Olho Esquerdo (Principal Interativo) -->
+        <g id="eye-socket-left">
+          <circle cx="68" cy="36" r="9" fill="#ffffff" stroke="#1e0a45" stroke-width="1.5"/>
+          <circle id="pupil-left" class="pupil" cx="68" cy="36" r="4.5" fill="#0f172a"/>
+          <circle cx="66" cy="33.5" r="1.5" fill="#ffffff"/>
+        </g>
+
+        <!-- Bochecha Rosada -->
+        <circle cx="76" cy="46" r="3.5" fill="#f472b6" opacity="0.7"/>
+
+        <!-- Cílios/Sobrancelha -->
+        <path id="seahorse-brow" d="M60 28Q68 25 74 29" stroke="#1e0a45" stroke-width="2" stroke-linecap="round"/>
+
+        <!-- Bolhinhas Saindo do Focinho -->
+        <circle cx="96" cy="62" r="2.5" fill="#38bdf8" opacity="0.8" class="animate-ping"/>
+        <circle cx="104" cy="55" r="3.5" fill="#38bdf8" opacity="0.6"/>
+
+        <defs>
+          <linearGradient id="seahorse-grad" x1="40" y1="10" x2="90" y2="130" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#a78bfa"/>
+            <stop offset="0.5" stop-color="#8b5cf6"/>
+            <stop offset="1" stop-color="#4c1d95"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ================= CABEÇALHO DA APLICAÇÃO ================= -->
+  <header class="max-w-7xl mx-auto w-full mb-6 pr-24 sm:pr-28 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-purpleAbyss-700 via-purpleAbyss-600 to-abyss-400 flex items-center justify-center shadow-lg shadow-purpleAbyss-900/60 border border-purpleAbyss-400/30">
+        <i class="fa-solid fa-water-ladder text-2xl sm:text-3xl text-cyan-300"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-extrabold uppercase tracking-widest bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-md border border-cyan-400/30">SUBSEA EXPEDITION</span>
+          <span class="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Módulo Abissal
+          </span>
+        </div>
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-100 to-purpleAbyss-400">
+          Inscrição de Explorador Submarino
+        </h1>
+      </div>
+    </div>
+
+    <!-- Controles do Topo (Som Mudo/Ativo & Botão Ver Simulador 3D no Mobile) -->
+    <div class="flex items-center gap-2 self-start sm:self-auto">
+      <button onclick="toggleAudio()" id="btn-audio" type="button" class="glass-card px-3.5 py-2 rounded-xl text-xs font-semibold text-cyan-200 hover:text-white flex items-center gap-2 transition-all">
+        <i id="audio-icon" class="fa-solid fa-volume-high text-cyan-400"></i>
+        <span id="audio-status" class="hidden sm:inline">Som Ativo</span>
+      </button>
+
+      <!-- Botão Mobile para Abrir 3D -->
+      <button onclick="toggleMobile3DModal()" type="button" class="lg:hidden glass-card px-3.5 py-2 rounded-xl text-xs font-semibold text-purpleAbyss-300 hover:text-white flex items-center gap-2 border-purpleAbyss-400/40 bg-purpleAbyss-900/40">
+        <i class="fa-solid fa-cubes text-cyan-400"></i>
+        <span>Ver Submarino 3D</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= CONTEÚDO PRINCIPAL (GRID RESPONSIVO) ================= -->
+  <main class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start mb-10 relative z-10">
+    
+    <!-- COLUNA DA ESQUERDA: FORMULÁRIO EM ABAS (lg:col-span-7) -->
+    <section class="lg:col-span-7 xl:col-span-7 w-full glass-card rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl relative">
+      
+      <!-- Indicador de Progresso da Inscrição -->
+      <div class="mb-6">
+        <div class="flex justify-between items-center text-xs font-bold text-cyan-200 mb-2">
+          <span class="uppercase tracking-wider">Etapa de Credenciamento Abissal</span>
+          <span id="progress-text" class="text-purpleAbyss-400 font-mono">Passo 1 de 3 (33%)</span>
+        </div>
+        <div class="w-full bg-slate-950/80 rounded-full h-2.5 overflow-hidden border border-purpleAbyss-500/30 p-0.5">
+          <div id="progress-bar" class="bg-gradient-to-r from-purpleAbyss-600 via-cyan-400 to-fuchsia-400 h-full rounded-full w-1/3 transition-all duration-500 ease-out"></div>
+        </div>
+      </div>
+
+      <!-- Navegação por Abas (Tabs) -->
+      <nav class="flex border-b border-purpleAbyss-500/20 mb-6 gap-1.5 sm:gap-3 overflow-x-auto pb-2 scrollbar-none" aria-label="Navegação das Abas">
+        <button type="button" onclick="switchTab(1)" id="tab-btn-1" class="tab-btn flex-1 min-w-[120px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all bg-purpleAbyss-700 text-white shadow-lg shadow-purpleAbyss-900/50">
+          <i class="fa-solid fa-user-astronaut text-xs"></i>
+          <span>1. Pessoais</span>
+        </button>
+
+        <button type="button" onclick="switchTab(2)" id="tab-btn-2" class="tab-btn flex-1 min-w-[120px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-cyan-200 hover:bg-purpleAbyss-900/40">
+          <i class="fa-solid fa-compass text-xs"></i>
+          <span>2. Endereço</span>
+        </button>
+
+        <button type="button" onclick="switchTab(3)" id="tab-btn-3" class="tab-btn flex-1 min-w-[120px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-cyan-200 hover:bg-purpleAbyss-900/40">
+          <i class="fa-solid fa-ship text-xs"></i>
+          <span>3. Expedição Subsea</span>
+        </button>
+      </nav>
+
+      <!-- FORMULÁRIO PRINCIPAL -->
+      <form id="form-expedicao" onsubmit="handleFormSubmit(event)" novalidate>
+        
+        <!-- ================= ABA 1: DADOS PESSOAIS ================= -->
+        <div id="tab-content-1" class="tab-content space-y-4 sm:space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            
+            <!-- Nome Completo -->
+            <div class="sm:col-span-2">
+              <label for="nome" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Nome Completo <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="nome" name="nome" placeholder="Ex: Lucas Gabriel da Silva" oninput="liveUpdatePassport(); clearError('err-nome', this);" onfocus="speakSeahorse('Informe seu nome completo (nome e sobrenome), apenas letras!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-nome" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Por favor, informe seu nome completo (nome e sobrenome), apenas letras e espaços.</span>
+              </p>
+            </div>
+
+            <!-- CPF -->
+            <div>
+              <label for="cpf" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                CPF <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-id-card absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="cpf" name="cpf" maxlength="14" placeholder="000.000.000-00" oninput="maskCPF(this); liveUpdatePassport(); clearError('err-cpf', this);" onfocus="speakSeahorse('Validarei seu CPF em módulo 11 matematicamente!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-cpf" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>CPF inválido. Verifique os números digitados.</span>
+              </p>
+            </div>
+
+            <!-- Data de Nascimento -->
+            <div>
+              <label for="dataNascimento" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Data de Nascimento <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-calendar-days absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="date" id="dataNascimento" name="dataNascimento" oninput="clearError('err-dataNascimento', this)" onfocus="speakSeahorse('Datas no futuro ou anteriores a 1900 não são permitidas!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-dataNascimento" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Data de nascimento inválida.</span>
+              </p>
+            </div>
+
+            <!-- E-mail -->
+            <div>
+              <label for="email" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                E-mail para Comunicação <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="email" id="email" name="email" placeholder="explorador@subsea.com" oninput="clearError('err-email', this)" onfocus="speakSeahorse('Você receberá as coordenadas da expedição por e-mail!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-email" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Por favor, informe um e-mail válido.</span>
+              </p>
+            </div>
+
+            <!-- Telefone -->
+            <div>
+              <label for="telefone" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Telefone de Emergência <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-phone absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="tel" id="telefone" name="telefone" maxlength="15" placeholder="(00) 90000-0000" oninput="maskTelefone(this); clearError('err-telefone', this);" onfocus="speakSeahorse('Informe seu telefone com DDD (10 ou 11 dígitos).')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-telefone" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Informe um número de telefone válido com DDD (10 ou 11 dígitos).</span>
+              </p>
+            </div>
+
+            <!-- Senha -->
+            <div>
+              <label for="senha" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Chave de Acesso (Senha) <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-key absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="password" id="senha" name="senha" placeholder="Mínimo 8 caracteres" oninput="clearError('err-senha', this)" onfocus="speakSeahorse('Crie uma senha segura com no mínimo 8 dígitos!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Confirmação de Senha -->
+            <div>
+              <label for="confirmarSenha" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Confirmar Chave <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="password" id="confirmarSenha" name="confirmarSenha" placeholder="Repita a senha" oninput="clearError('err-senha', this)" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <p id="err-senha" class="hidden text-rose-400 text-xs mt-1 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>As senhas não coincidem ou não possuem o mínimo de 8 caracteres.</span>
+              </p>
+            </div>
+
+            <!-- ================= PERGUNTA DE SENSIBILIDADE A AMBIENTES ESCUROS / CLAUSTROFOBIA ================= -->
+            <div class="sm:col-span-2 bg-slate-950/70 p-4 rounded-2xl border border-purpleAbyss-500/30">
+              <label class="block text-xs font-bold uppercase tracking-wider text-cyan-300 mb-2">
+                <i class="fa-solid fa-lightbulb text-amber-400 mr-1.5"></i>
+                Possui claustrofobia ou sensibilidade a ambientes escuros? <span class="text-fuchsia-400">*</span>
+              </label>
+              
+              <div class="flex items-center gap-6 mt-1">
+                <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+                  <input type="radio" name="escuroSensitivity" value="Nao" onchange="toggleDarkWarning(false)" class="w-4 h-4 accent-purpleAbyss-600" checked>
+                  <span>Não</span>
+                </label>
+
+                <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+                  <input type="radio" name="escuroSensitivity" value="Sim" onchange="toggleDarkWarning(true)" class="w-4 h-4 accent-purpleAbyss-600">
+                  <span>Sim, possuo sensibilidade</span>
+                </label>
+              </div>
+
+              <!-- CARD DE AVISO DE EXPEDIÇÃO SUBMARINA -->
+              <div id="dark-place-warning" class="hidden mt-3 p-3.5 rounded-xl bg-amber-950/80 border border-amber-500/60 text-amber-200 text-xs leading-relaxed animate-pulse-biolum flex items-start gap-2.5">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-base flex-shrink-0 mt-0.5"></i>
+                <div>
+                  <span class="font-bold text-amber-300 block mb-0.5">⚠️ AVISO DE EXPEDIÇÃO SUBMARINA:</span>
+                  <p>A jornada atinge até 4.000m de profundidade em ambiente de penumbra com iluminação LED direcional. Recomendamos orientação médica prévia.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================= ABA 2: ENDEREÇO BASE ================= -->
+        <div id="tab-content-2" class="tab-content hidden space-y-4 sm:space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+            
+            <!-- CEP -->
+            <div class="sm:col-span-1">
+              <label for="cep" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                CEP Residencial <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-map-pin absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="cep" name="cep" maxlength="9" placeholder="00000-000" oninput="maskCEP(this); checkCEPAutoSearch(this); clearError('err-cep', this);" onfocus="speakSeahorse('Ao digitar os 8 números do CEP buscarei o endereço!')" class="glass-input w-full pl-10 pr-10 py-3 rounded-xl text-sm" required>
+                <div id="cep-loader" class="hidden absolute right-3 top-3.5">
+                  <i class="fa-solid fa-circle-notch fa-spin text-cyan-400"></i>
+                </div>
+              </div>
+              <p id="err-cep" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>CEP inválido. O CEP deve conter 8 dígitos numéricos.</span>
+              </p>
+            </div>
+
+            <!-- Logradouro -->
+            <div class="sm:col-span-2">
+              <label for="logradouro" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Logradouro (Rua / Av.) <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-road absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="logradouro" name="logradouro" placeholder="Ex: Av. Atlântica" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Número -->
+            <div>
+              <label for="numero" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Número <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-hashtag absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="numero" name="numero" placeholder="100" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Bairro -->
+            <div>
+              <label for="bairro" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Bairro <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-building-user absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="bairro" name="bairro" placeholder="Bairro" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Cidade -->
+            <div>
+              <label for="cidade" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Cidade <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-city absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <input type="text" id="cidade" name="cidade" placeholder="Cidade" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Estado UF -->
+            <div class="sm:col-span-3">
+              <label for="estado" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Estado (UF) <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-map-location-dot absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <select id="estado" name="estado" class="glass-input w-full pl-10 pr-8 py-3 rounded-xl text-sm appearance-none bg-slate-900" required>
+                  <option value="" disabled selected>Selecione o Estado UF</option>
+                  <option value="AC">Acre (AC)</option>
+                  <option value="AL">Alagoas (AL)</option>
+                  <option value="AP">Amapá (AP)</option>
+                  <option value="AM">Amazonas (AM)</option>
+                  <option value="BA">Bahia (BA)</option>
+                  <option value="CE">Ceará (CE)</option>
+                  <option value="DF">Distrito Federal (DF)</option>
+                  <option value="ES">Espírito Santo (ES)</option>
+                  <option value="GO">Goiás (GO)</option>
+                  <option value="MA">Maranhão (MA)</option>
+                  <option value="MT">Mato Grosso (MT)</option>
+                  <option value="MS">Mato Grosso do Sul (MS)</option>
+                  <option value="MG">Minas Gerais (MG)</option>
+                  <option value="PA">Pará (PA)</option>
+                  <option value="PB">Paraíba (PB)</option>
+                  <option value="PR">Paraná (PR)</option>
+                  <option value="PE">Pernambuco (PE)</option>
+                  <option value="PI">Piauí (PI)</option>
+                  <option value="RJ">Rio de Janeiro (RJ)</option>
+                  <option value="RN">Rio Grande do Norte (RN)</option>
+                  <option value="RS">Rio Grande do Sul (RS)</option>
+                  <option value="RO">Rondônia (RO)</option>
+                  <option value="RR">Roraima (RR)</option>
+                  <option value="SC">Santa Catarina (SC)</option>
+                  <option value="SP">São Paulo (SP)</option>
+                  <option value="SE">Sergipe (SE)</option>
+                  <option value="TO">Tocantins (TO)</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3.5 top-4 text-xs text-cyan-400/60 pointer-events-none"></i>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================= ABA 3: DADOS DA EXPEDIÇÃO SUBSEA ================= -->
+        <div id="tab-content-3" class="tab-content hidden space-y-4 sm:space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            
+            <!-- Nome do Submarino -->
+            <div class="sm:col-span-2">
+              <label for="submarino" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Submarino de Exploração Abissal <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-ship absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <select id="submarino" name="submarino" onchange="liveUpdatePassport(); updateSubmarineVisuals();" onfocus="speakSeahorse('Escolha sua embarcação de alta pressão!')" class="glass-input w-full pl-10 pr-8 py-3 rounded-xl text-sm appearance-none bg-slate-900" required>
+                  <option value="" disabled selected>Escolha o Submarino</option>
+                  <option value="Nautilus IX - Titanium Deep">Nautilus IX - Titanium Deep (Capacidade 4.000m)</option>
+                  <option value="Abyssal Titan - BioLED Spec">Abyssal Titan - BioLED Spec (Iluminação Avançada)</option>
+                  <option value="Trident Deep-4 - Explorer">Trident Deep-4 - Explorer (Cúpula Panorâmica)</option>
+                  <option value="Leviathan Subsea-X">Leviathan Subsea-X (Pesquisa Oceânica Extrema)</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3.5 top-4 text-xs text-cyan-400/60 pointer-events-none"></i>
+              </div>
+              <p id="err-submarino" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Por favor, selecione um submarino para a expedição.</span>
+              </p>
+            </div>
+
+            <!-- Horário da Incursão -->
+            <div>
+              <label for="horario" class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1">
+                Horário da Incursão <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-clock absolute left-3.5 top-3.5 text-cyan-400/60 text-sm"></i>
+                <select id="horario" name="horario" onchange="liveUpdatePassport()" class="glass-input w-full pl-10 pr-8 py-3 rounded-xl text-sm appearance-none bg-slate-900" required>
+                  <option value="" disabled selected>Selecione o Horário</option>
+                  <option value="Turno Aurora (06:00)">Turno Aurora (06:00)</option>
+                  <option value="Turno Solar (11:00)">Turno Solar (11:00)</option>
+                  <option value="Turno Crepúsculo (16:00)">Turno Crepúsculo (16:00)</option>
+                  <option value="Turno Abissal Noturno (22:00)">Turno Abissal Noturno (22:00)</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3.5 top-4 text-xs text-cyan-400/60 pointer-events-none"></i>
+              </div>
+            </div>
+
+            <!-- Profundidade Alvo (Slider) -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-cyan-200 mb-1 flex justify-between">
+                <span>Profundidade Alvo:</span>
+                <span id="depth-slider-val" class="text-cyan-400 font-mono font-extrabold">2.500 metros</span>
+              </label>
+              <div class="glass-input p-3 rounded-xl flex items-center gap-3">
+                <i class="fa-solid fa-water-lower text-cyan-400 text-sm"></i>
+                <input type="range" id="profundidade" name="profundidade" min="200" max="4000" step="100" value="2500" oninput="handleDepthSliderChange(this.value)" class="w-full accent-cyan-400 cursor-pointer">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- BOTÕES DE NAVEGAÇÃO DO FORMULÁRIO -->
+        <div class="flex items-center justify-between mt-8 pt-6 border-t border-purpleAbyss-500/20 gap-3">
+          <button type="button" id="btn-prev" onclick="navigateStep(-1)" class="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 text-slate-300 hover:bg-slate-800 transition-all opacity-40 cursor-not-allowed flex items-center gap-2" disabled>
+            <i class="fa-solid fa-arrow-left text-xs"></i>
+            <span>Anterior</span>
+          </button>
+
+          <button type="button" id="btn-next" onclick="navigateStep(1)" class="px-5 sm:px-7 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-purpleAbyss-600 to-cyan-600 hover:from-purpleAbyss-500 hover:to-cyan-500 text-white shadow-lg shadow-purpleAbyss-900/50 transition-all flex items-center gap-2">
+            <span>Próxima Etapa</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+
+          <button type="submit" id="btn-submit" class="hidden px-6 sm:px-8 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-xl shadow-emerald-500/30 transition-all flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-sm"></i>
+            <span>Confirmar Expedição</span>
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- COLUNA DA DIREITA: CRACHÁ/PASSAPORTE + EXPERIÊNCIA 3D SUBMARINA (lg:col-span-5) -->
+    <aside id="subsea-aside" class="lg:col-span-5 xl:col-span-5 w-full space-y-6">
+      
+      <!-- ================= EXPERIÊNCIA 3D SUBSEA (THREE.JS SIMULATOR) ================= -->
+      <div class="glass-card rounded-3xl p-4 sm:p-5 shadow-2xl relative overflow-hidden border border-cyan-400/30">
+        <div class="flex items-center justify-between mb-3 border-b border-purpleAbyss-500/30 pb-2.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-cubes text-cyan-400 animate-spin-slow"></i>
+            <h3 class="text-xs font-extrabold uppercase tracking-widest text-cyan-200">Experiência 3D Subsea</h3>
+          </div>
+          <button onclick="toggleSubmarineLight()" type="button" id="btn-sub-light" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500/40 flex items-center gap-1.5 transition-all">
+            <i id="light-icon" class="fa-solid fa-lightbulb text-amber-300"></i>
+            <span id="light-status">Farol LED: ON</span>
+          </button>
+        </div>
+
+        <!-- CANVAS DO MODELO 3D THREE.JS -->
+        <div class="relative w-full h-48 sm:h-56 rounded-2xl bg-slate-950/90 overflow-hidden border border-cyan-500/20 group cursor-grab active:cursor-grabbing">
+          <canvas id="three-sub-canvas" class="w-full h-full"></canvas>
+          
+          <!-- Overlay de Leitura de Profundidade no 3D -->
+          <div class="absolute bottom-2 left-2 right-2 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-purpleAbyss-500/30 flex items-center justify-between text-[10px] font-mono">
+            <span class="text-slate-300"><i class="fa-solid fa-gauge-high text-cyan-400 mr-1"></i> Profundidade:</span>
+            <span id="3d-depth-display" class="text-cyan-300 font-bold">2.500m</span>
+          </div>
+
+          <div class="absolute top-2 left-2 text-[9px] text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-md pointer-events-none">
+            🖱️ Arraste para girar em 3D
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PASSAPORTE ABISSAL LIVE ================= -->
+      <div class="glass-card rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden border border-purpleAbyss-400/30 group">
+        <div class="absolute inset-0 hologram-overlay opacity-30 pointer-events-none group-hover:opacity-60 transition-opacity duration-500"></div>
+
+        <div class="flex items-center justify-between mb-4 border-b border-purpleAbyss-500/30 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purpleAbyss-600 to-cyan-500 flex items-center justify-center text-white font-extrabold text-xs">
+              SUB
+            </div>
+            <div>
+              <p class="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">PASSAPORTE ABISSAL</p>
+              <p class="text-[9px] text-slate-400">Credencial de Incursão</p>
+            </div>
+          </div>
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+            Aprovado
+          </span>
+        </div>
+
+        <div class="flex flex-col items-center text-center my-2">
+          <div class="relative mb-3">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-purpleAbyss-600 via-cyan-400 to-fuchsia-400 p-1 shadow-xl shadow-purpleAbyss-900/50">
+              <div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                <span id="badge-initials" class="text-2xl font-extrabold text-cyan-300 uppercase">
+                  EX
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h2 id="badge-nome" class="text-base font-extrabold text-white truncate max-w-[220px]">
+            Nome do Explorador
+          </h2>
+          <p id="badge-submarino" class="text-xs text-purpleAbyss-300 font-medium mt-0.5 max-w-[220px] truncate">
+            Selecione o Submarino
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-left bg-slate-950/70 p-3 rounded-2xl border border-purpleAbyss-500/20 text-[11px] my-3">
+          <div>
+            <span class="text-[9px] font-bold uppercase tracking-wider text-cyan-400/80 block">Código Passaporte</span>
+            <span id="badge-code" class="font-mono font-bold text-white">SUB-2026-99</span>
+          </div>
+          <div>
+            <span class="text-[9px] font-bold uppercase tracking-wider text-cyan-400/80 block">Horário / Nível</span>
+            <span id="badge-horario-prof" class="font-semibold text-cyan-100">--- / 2.500m</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center pt-2 border-t border-purpleAbyss-500/20">
+          <svg class="h-8 w-full max-w-[180px]" opacity="0.85" viewBox="0 0 160 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" width="3" height="30" fill="#38bdf8"/>
+            <rect x="5" width="2" height="30" fill="#38bdf8"/>
+            <rect x="9" width="6" height="30" fill="#38bdf8"/>
+            <rect x="17" width="2" height="30" fill="#38bdf8"/>
+            <rect x="22" width="4" height="30" fill="#38bdf8"/>
+            <rect x="30" width="5" height="30" fill="#38bdf8"/>
+            <rect x="40" width="3" height="30" fill="#38bdf8"/>
+            <rect x="48" width="7" height="30" fill="#38bdf8"/>
+            <rect x="60" width="2" height="30" fill="#38bdf8"/>
+            <rect x="68" width="4" height="30" fill="#38bdf8"/>
+            <rect x="78" width="6" height="30" fill="#38bdf8"/>
+            <rect x="90" width="3" height="30" fill="#38bdf8"/>
+            <rect x="100" width="5" height="30" fill="#38bdf8"/>
+            <rect x="110" width="2" height="30" fill="#38bdf8"/>
+            <rect x="120" width="6" height="30" fill="#38bdf8"/>
+            <rect x="132" width="4" height="30" fill="#38bdf8"/>
+            <rect x="145" width="3" height="30" fill="#38bdf8"/>
+          </svg>
+          <span class="text-[9px] font-mono text-cyan-300 tracking-widest mt-1">DEEP-SEA-VERIFIED</span>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- ================= SEÇÃO: TABELA DE EXPLORADORES CADASTRADOS ================= -->
+  <section class="max-w-7xl mx-auto w-full glass-card rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl mb-12 relative z-10">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div>
+        <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-users text-cyan-400"></i>
+          <span>Exploradores Inscritos na Expedição</span>
+        </h2>
+        <p class="text-xs text-cyan-200/70">Registros sincronizados em banco de dados local do navegador</p>
+      </div>
+
+      <!-- Busca Dinâmica -->
+      <div class="relative w-full sm:w-72">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-cyan-400/60 text-xs"></i>
+        <input type="text" id="search-input" onkeyup="filterExploradoresTable()" placeholder="Buscar por nome ou CPF..." class="glass-input w-full pl-9 pr-3 py-2 rounded-xl text-xs">
+      </div>
+    </div>
+
+    <!-- Tabela Responsiva de Cadastrados -->
+    <div class="overflow-x-auto rounded-2xl border border-purpleAbyss-500/20 bg-slate-950/50">
+      <table class="w-full text-left text-xs sm:text-sm">
+        <thead class="bg-purpleAbyss-950/80 text-cyan-200 uppercase tracking-wider text-[10px] sm:text-xs">
+          <tr>
+            <th class="p-3 sm:p-4">Explorador</th>
+            <th class="p-3 sm:p-4">CPF</th>
+            <th class="p-3 sm:p-4">Submarino / Profundidade</th>
+            <th class="p-3 sm:p-4 text-center">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="exploradores-table-body" class="divide-y divide-purpleAbyss-500/10">
+          <!-- Conteúdo Gerado via JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= MODAL DETALHES DO EXPLORADOR ================= -->
+  <div id="details-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+    <div class="glass-card bg-slate-900/95 max-w-md w-full rounded-3xl p-6 shadow-2xl border border-cyan-500/40 relative">
+      <button onclick="closeModal()" type="button" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-xl bg-purpleAbyss-700 flex items-center justify-center text-cyan-300 text-lg font-bold">
+          <i class="fa-solid fa-user-astronaut"></i>
+        </div>
+        <div>
+          <h3 id="modal-nome" class="text-base font-bold text-white truncate max-w-[220px]">Nome do Explorador</h3>
+          <p id="modal-submarino" class="text-xs text-cyan-300">Submarino</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300">
+        <div class="grid grid-cols-2 gap-2 p-3 bg-slate-950/80 rounded-xl border border-purpleAbyss-500/20">
+          <div>
+            <span class="text-cyan-400 text-[9px] uppercase font-bold block">CPF</span>
+            <span id="modal-cpf" class="font-mono text-white">-</span>
+          </div>
+          <div>
+            <span class="text-cyan-400 text-[9px] uppercase font-bold block">Nascimento</span>
+            <span id="modal-nasc" class="text-white">-</span>
+          </div>
+          <div>
+            <span class="text-cyan-400 text-[9px] uppercase font-bold block">Telefone</span>
+            <span id="modal-telefone" class="text-white">-</span>
+          </div>
+          <div>
+            <span class="text-cyan-400 text-[9px] uppercase font-bold block">E-mail</span>
+            <span id="modal-email" class="text-white truncate block">-</span>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-950/80 rounded-xl border border-purpleAbyss-500/20">
+          <span class="text-cyan-400 text-[9px] uppercase font-bold block mb-0.5">Endereço Residencial</span>
+          <p id="modal-endereco" class="text-white leading-relaxed">-</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 p-3 bg-slate-950/80 rounded-xl border border-purpleAbyss-500/20">
+          <div>
+            <span class="text-cyan-400 text-[9px] uppercase font-bold block">Horário</span>
+            <span id="modal-horario" class="text-white font-semibold">-</span>
+          </div>
+          <div>
+            <span class="text-cyan-400 text-[9px] uppercase font-bold block">Profundidade</span>
+            <span id="modal-profundidade" class="text-cyan-300 font-extrabold">-</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeModal()" type="button" class="px-5 py-2 rounded-xl text-xs font-bold bg-purpleAbyss-700 hover:bg-purpleAbyss-600 text-white shadow-lg">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL PERSONALIZADO DE CONFIRMAÇÃO DE EXCLUSÃO ================= -->
+  <div id="confirm-delete-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+    <div class="glass-card bg-slate-900/95 max-w-sm w-full rounded-3xl p-6 shadow-2xl border border-rose-500/40 text-center">
+      <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3 text-xl border border-rose-500/30">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="text-base font-bold text-white mb-2">Excluir Explorador?</h3>
+      <p class="text-xs text-slate-300 mb-6">Esta ação removerá permanentemente o cadastro da lista de expedição.</p>
+      
+      <div class="flex items-center justify-center gap-3">
+        <button onclick="closeConfirmModal()" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">
+          Cancelar
+        </button>
+        <button id="btn-confirm-delete" type="button" class="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg">
+          Sim, Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= DRAWER MODAL MOBILE 3D ================= -->
+  <div id="mobile-3d-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-end justify-center p-0 lg:hidden hidden transition-all duration-300">
+    <div class="glass-card bg-slate-900/95 w-full rounded-t-3xl p-5 shadow-2xl border-t border-cyan-500/40 relative">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-white">Simulador 3D do Submarino</h3>
+        <button onclick="toggleMobile3DModal()" type="button" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div id="mobile-3d-container" class="w-full h-64">
+        <!-- O container 3D é adaptado aqui -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NOTIFICAÇÃO TOAST ================= -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-semibold transition-all duration-300 opacity-0 translate-y-10 pointer-events-none max-w-[90vw]">
+    <i id="toast-icon" class="text-base"></i>
+    <span id="toast-msg">Mensagem Toast</span>
+  </div>
+
+  <!-- RODAPÉ -->
+  <footer class="max-w-7xl mx-auto w-full text-center text-xs text-cyan-300/60 py-4 relative z-10">
+    <p>© 2026 Subsea Expeditions Inc. — Exploração Científica dos Mares Profundos</p>
+  </footer>
+
+  <!-- ================= LÓGICA JAVASCRIPT PRINCIPAL ================= -->
+  <script>
+    // ESTADO GLOBAL DA APLICAÇÃO
+    let currentTab = 1;
+    let audioEnabled = true;
+    let exploradoresList = JSON.parse(localStorage.getItem('subsea_exploradores_db')) || [];
+    let deleteTargetId = null;
+
+    // Web Audio API Context
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!audioEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'step') {
+          osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+          gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.12);
+        } else if (type === 'error') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.25);
+        } else if (type === 'success') {
+          const notes = [440, 554.37, 659.25, 880];
+          notes.forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.08);
+            g.gain.setValueAtTime(0.08, audioCtx.currentTime + idx * 0.08);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.08 + 0.25);
+            o.start(audioCtx.currentTime + idx * 0.08);
+            o.stop(audioCtx.currentTime + idx * 0.08 + 0.25);
+          });
+        }
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const statusEl = document.getElementById('audio-status');
+      const iconEl = document.getElementById('audio-icon');
+
+      if (audioEnabled) {
+        statusEl.innerText = 'Som Ativo';
+        iconEl.className = 'fa-solid fa-volume-high text-cyan-400';
+      } else {
+        statusEl.innerText = 'Mudo';
+        iconEl.className = 'fa-solid fa-volume-xmark text-slate-500';
+      }
+    }
+
+
+    // ================= RASTREAMENTO DO MASCOTE CAVALO MARINHO =================
+    const pupilLeft = document.getElementById('pupil-left');
+    const eyeSocketLeft = document.getElementById('eye-socket-left');
+    const seahorseSpeech = document.getElementById('seahorse-speech');
+
+    function updateSeahorsePupil(pointerX, pointerY) {
+      if (!eyeSocketLeft || !pupilLeft) return;
+      const rect = eyeSocketLeft.getBoundingClientRect();
+      const eyeX = rect.left + rect.width / 2;
+      const eyeY = rect.top + rect.height / 2;
+
+      const angle = Math.atan2(pointerY - eyeY, pointerX - eyeX);
+      const dist = Math.min(4, Math.hypot(pointerX - eyeX, pointerY - eyeY) / 15);
+
+      const pupilX = Math.cos(angle) * dist;
+      const pupilY = Math.sin(angle) * dist;
+
+      pupilLeft.setAttribute('transform', `translate(${pupilX}, ${pupilY})`);
+    }
+
+    window.addEventListener('mousemove', (e) => updateSeahorsePupil(e.clientX, e.clientY));
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) updateSeahorsePupil(e.touches[0].clientX, e.touches[0].clientY);
+    });
+
+    function speakSeahorse(text) {
+      if (seahorseSpeech) seahorseSpeech.innerText = text;
+    }
+
+    function triggerSeahorseInteraction() {
+      speakSeahorse("Ajustando os sistemas de sonar e iluminação do submarino! 🌊");
+      playSound('step');
+    }
+
+    // Toggle Aviso de Lugares Escuros
+    function toggleDarkWarning(isYes) {
+      const warnBox = document.getElementById('dark-place-warning');
+      if (isYes) {
+        warnBox.classList.remove('hidden');
+        speakSeahorse("Aviso importante: ambientes de alta penumbra exigem atenção médica!");
+      } else {
+        warnBox.classList.add('hidden');
+      }
+    }
+
+
+    // ================= EXPERIÊNCIA 3D COM THREE.JS =================
+    let scene, camera, renderer, subGroup, propGroup, spotLight, coneMesh, biolumParticles;
+    let isSubLightOn = true;
+
+    function init3DSubmarine() {
+      const canvas = document.getElementById('three-sub-canvas');
+      if (!canvas) return;
+
+      const width = canvas.parentElement.clientWidth;
+      const height = canvas.parentElement.clientHeight;
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x020817, 0.08);
+
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      camera.position.set(0, 1.2, 6.5);
+
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // Iluminação da Cena
+      const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.7);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xa78bfa, 0.9);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
+
+      // Grupo do Submarino
+      subGroup = new THREE.Group();
+
+      // Casco Principal
+      const hullMat = new THREE.MeshPhongMaterial({ color: 0x6d28d9, specular: 0xc4b5fd, shininess: 80 });
+      const hullGeo = new THREE.CylinderGeometry(0.7, 0.7, 2.6, 32);
+      hullGeo.rotateZ(Math.PI / 2);
+      const hull = new THREE.Mesh(hullGeo, hullMat);
+      subGroup.add(hull);
+
+      // Cúpula Panorâmica Frontal
+      const domeGeo = new THREE.SphereGeometry(0.7, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+      const domeMat = new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7, roughness: 0.1, transmission: 0.8 });
+      const dome = new THREE.Mesh(domeGeo, domeMat);
+      dome.rotation.z = -Math.PI / 2;
+      dome.position.x = 1.3;
+      subGroup.add(dome);
+
+      // Núcleo Luminoso Interno
+      const glowGeo = new THREE.SphereGeometry(0.35, 16, 16);
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+      const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+      glowMesh.position.x = 1.2;
+      subGroup.add(glowMesh);
+
+      // Torre de Comando / Escotilha
+      const towerGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.5, 16);
+      const tower = new THREE.Mesh(towerGeo, hullMat);
+      tower.position.set(0, 0.7, 0);
+      subGroup.add(tower);
+
+      // Hélice Traseira
+      propGroup = new THREE.Group();
+      propGroup.position.x = -1.4;
+      const bladeGeo = new THREE.BoxGeometry(0.04, 0.6, 0.12);
+      const propMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8 });
+      for (let i = 0; i < 3; i++) {
+        const blade = new THREE.Mesh(bladeGeo, propMat);
+        blade.rotation.x = (i * Math.PI * 2) / 3;
+        propGroup.add(blade);
+      }
+      subGroup.add(propGroup);
+
+      // Farol LED Spot
+      spotLight = new THREE.SpotLight(0x00f0ff, 4, 12, Math.PI / 6, 0.5);
+      spotLight.position.set(1.4, 0, 0);
+      spotLight.target.position.set(8, 0, 0);
+      subGroup.add(spotLight);
+      subGroup.add(spotLight.target);
+
+      // Cone Visual do Feixe de Luz
+      const coneGeo = new THREE.ConeGeometry(1.4, 4.5, 16, 1, true);
+      const coneMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+      coneMesh = new THREE.Mesh(coneGeo, coneMat);
+      coneMesh.rotation.z = -Math.PI / 2;
+      coneMesh.position.set(3.6, 0, 0);
+      subGroup.add(coneMesh);
+
+      scene.add(subGroup);
+
+      // Partículas Bioluminescentes
+      const pCount = 80;
+      const pGeo = new THREE.BufferGeometry();
+      const pPositions = new Float32Array(pCount * 3);
+      for (let i = 0; i < pCount * 3; i += 3) {
+        pPositions[i] = (Math.random() - 0.5) * 10;
+        pPositions[i + 1] = (Math.random() - 0.5) * 6;
+        pPositions[i + 2] = (Math.random() - 0.5) * 10;
+      }
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+      const pMat = new THREE.PointsMaterial({ color: 0xc4b5fd, size: 0.08, transparent: true, opacity: 0.8 });
+      biolumParticles = new THREE.Points(pGeo, pMat);
+      scene.add(biolumParticles);
+
+      // Rotação Interativa com Drag do Mouse
+      let isDragging = false;
+      let prevMouseX = 0;
+      let prevMouseY = 0;
+
+      canvas.parentElement.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => isDragging = false);
+
+      canvas.parentElement.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - prevMouseX;
+        const deltaY = e.clientY - prevMouseY;
+        subGroup.rotation.y += deltaX * 0.01;
+        subGroup.rotation.x += deltaY * 0.01;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+      });
+
+      // Loop de Animação 3D
+      function animate3D() {
+        requestAnimationFrame(animate3D);
+
+        // Giro constante da hélice
+        if (propGroup) propGroup.rotation.x += 0.15;
+
+        // Oscilação suave do submarino
+        subGroup.position.y = Math.sin(Date.now() * 0.0015) * 0.1;
+
+        // Animação das partículas
+        if (biolumParticles) biolumParticles.rotation.y += 0.002;
+
+        renderer.render(scene, camera);
+      }
+
+      animate3D();
+    }
+
+    function toggleSubmarineLight() {
+      isSubLightOn = !isSubLightOn;
+      const statusEl = document.getElementById('light-status');
+      const iconEl = document.getElementById('light-icon');
+
+      if (spotLight && coneMesh) {
+        spotLight.visible = isSubLightOn;
+        coneMesh.visible = isSubLightOn;
+      }
+
+      if (isSubLightOn) {
+        statusEl.innerText = 'Farol LED: ON';
+        iconEl.className = 'fa-solid fa-lightbulb text-amber-300';
+      } else {
+        statusEl.innerText = 'Farol LED: OFF';
+        iconEl.className = 'fa-regular fa-lightbulb text-slate-500';
+      }
+      playSound('step');
+    }
+
+    function handleDepthSliderChange(val) {
+      document.getElementById('depth-slider-val').innerText = `${parseInt(val).toLocaleString('pt-BR')} metros`;
+      document.getElementById('3d-depth-display').innerText = `${parseInt(val).toLocaleString('pt-BR')}m`;
+      
+      // Ajustar densidade da névoa no 3D com base na profundidade
+      if (scene && scene.fog) {
+        scene.fog.density = 0.04 + (val / 4000) * 0.08;
+      }
+      liveUpdatePassport();
+    }
+
+    function toggleMobile3DModal() {
+      const modal = document.getElementById('mobile-3d-modal');
+      const container = document.getElementById('mobile-3d-container');
+      const subCanvas = document.getElementById('three-sub-canvas');
+
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+
+    // ================= CANVAS DE PEIXES NO BACKGROUND =================
+    function initOceanBackground() {
+      const canvas = document.getElementById('ocean-bg');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const fishes = [];
+      const bubbles = [];
+
+      for (let i = 0; i < 18; i++) {
+        fishes.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          size: Math.random() * 12 + 10,
+          speed: Math.random() * 1.5 + 0.8,
+          direction: Math.random() < 0.5 ? 1 : -1,
+          color: Math.random() < 0.5 ? '#38bdf8' : '#a78bfa'
+        });
+      }
+
+      for (let i = 0; i < 30; i++) {
+        bubbles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 3 + 1,
+          speed: Math.random() * 1 + 0.5
+        });
+      }
+
+      let mouseX = -1000, mouseY = -1000;
+      window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      function drawOcean() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Desenhar Peixes
+        fishes.forEach(f => {
+          f.x += f.speed * f.direction;
+
+          // Esquivar do mouse
+          const dist = Math.hypot(f.x - mouseX, f.y - mouseY);
+          if (dist < 100) {
+            f.y += f.y < mouseY ? -2 : 2;
+          }
+
+          if (f.x > canvas.width + 30) f.x = -30;
+          if (f.x < -30) f.x = canvas.width + 30;
+
+          ctx.save();
+          ctx.translate(f.x, f.y);
+          if (f.direction < 0) ctx.scale(-1, 1);
+
+          // Desenhar formato de peixe em curva
+          ctx.fillStyle = f.color;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, f.size, f.size / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Cauda
+          ctx.beginPath();
+          ctx.moveTo(-f.size + 2, 0);
+          ctx.lineTo(-f.size - 8, -f.size / 2);
+          ctx.lineTo(-f.size - 8, f.size / 2);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+        });
+
+        // Desenhar Bolhas
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+        bubbles.forEach(b => {
+          b.y -= b.speed;
+          if (b.y < -10) b.y = canvas.height + 10;
+
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        requestAnimationFrame(drawOcean);
+      }
+
+      drawOcean();
+    }
+
+
+    // ================= MÁSCARAS DE ENTRADA =================
+    function maskCPF(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      input.value = v;
+    }
+
+    function maskTelefone(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length <= 10) {
+        v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        v = v.replace(/(\d{4})(\d)/, '$1-$2');
+      } else {
+        v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        v = v.replace(/(\d{5})(\d)/, '$1-$2');
+      }
+      input.value = v;
+    }
+
+    function maskCEP(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 8) v = v.slice(0, 8);
+      v = v.replace(/^(\d{5})(\d)/, '$1-$2');
+      input.value = v;
+    }
+
+
+    // ================= PASSAPORTE LIVE UPDATE =================
+    function liveUpdatePassport() {
+      const nome = document.getElementById('nome').value.trim();
+      const submarino = document.getElementById('submarino').value;
+      const horario = document.getElementById('horario').value || '---';
+      const prof = document.getElementById('profundidade').value;
+
+      document.getElementById('badge-nome').innerText = nome ? nome : 'Nome do Explorador';
+
+      const initialsEl = document.getElementById('badge-initials');
+      if (nome) {
+        const parts = nome.split(' ');
+        initialsEl.innerText = parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : nome.slice(0, 2).toUpperCase();
+      } else {
+        initialsEl.innerText = 'EX';
+      }
+
+      document.getElementById('badge-submarino').innerText = submarino ? submarino : 'Selecione o Submarino';
+      document.getElementById('badge-horario-prof').innerText = `${horario.split(' ')[0]} / ${parseInt(prof).toLocaleString('pt-BR')}m`;
+    }
+
+
+    // ================= FUNÇÕES DE VALIDAÇÃO REQUERIDAS =================
+
+    // 1. Nome Completo (Nome + Sobrenome, apenas letras e espaços)
+    function validateNome(nome) {
+      const trimmed = nome.trim();
+      const regex = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)+$/;
+      return regex.test(trimmed);
+    }
+
+    // 2. CPF (11 dígitos, rejeita repetidos e valida módulo 11)
+    function validateCPF(cpf) {
+      const clean = cpf.replace(/\D/g, '');
+      if (clean.length !== 11) return false;
+      if (/^(\d)\1{10}$/.test(clean)) return false;
+
+      let sum = 0;
+      for (let i = 0; i < 9; i++) sum += parseInt(clean.charAt(i)) * (10 - i);
+      let rev = 11 - (sum % 11);
+      if (rev === 10 || rev === 11) rev = 0;
+      if (rev !== parseInt(clean.charAt(9))) return false;
+
+      sum = 0;
+      for (let i = 0; i < 10; i++) sum += parseInt(clean.charAt(i)) * (11 - i);
+      rev = 11 - (sum % 11);
+      if (rev === 10 || rev === 11) rev = 0;
+      if (rev !== parseInt(clean.charAt(10))) return false;
+
+      return true;
+    }
+
+    // 3. Telefone (DDD 2 dígitos + 8 ou 9 dígitos = 10 ou 11 no total)
+    function validateTelefone(tel) {
+      const clean = tel.replace(/\D/g, '');
+      if (clean.length !== 10 && clean.length !== 11) return false;
+      const ddd = parseInt(clean.substring(0, 2));
+      return ddd >= 11 && ddd <= 99;
+    }
+
+    // 4. Data de Nascimento (Não futura e >= 1900)
+    function validateDataNascimento(dataStr) {
+      if (!dataStr) return false;
+      const parts = dataStr.split('-');
+      if (parts.length !== 3) return false;
+
+      const year = parseInt(parts[0]);
+      const inputDate = new Date(dataStr + 'T00:00:00');
+      const today = new Date();
+
+      if (isNaN(inputDate.getTime())) return false;
+      if (year < 1900) return false;
+      if (inputDate > today) return false;
+
+      return true;
+    }
+
+    // 5. CEP (Exatamente 8 dígitos numéricos)
+    function validateCEP(cep) {
+      const clean = cep.replace(/\D/g, '');
+      return clean.length === 8;
+    }
+
+    // 6. Senha e Confirmação (Mínimo 8 caracteres e idênticas)
+    function validateSenha(senha, confirmacao) {
+      if (!senha || senha.length < 8) return false;
+      return senha === confirmacao;
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    }
+
+
+    // ================= VIA CEP API INTEGRATION =================
+    async function checkCEPAutoSearch(input) {
+      const clean = input.value.replace(/\D/g, '');
+      if (clean.length === 8) {
+        document.getElementById('cep-loader').classList.remove('hidden');
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+          const data = await res.json();
+          document.getElementById('cep-loader').classList.add('hidden');
+
+          if (data.erro) {
+            showToast('CEP não encontrado.', 'error');
+            return;
+          }
+
+          document.getElementById('logradouro').value = data.logradouro || '';
+          document.getElementById('bairro').value = data.bairro || '';
+          document.getElementById('cidade').value = data.localidade || '';
+          document.getElementById('estado').value = data.uf || '';
+          document.getElementById('numero').focus();
+
+          speakSeahorse("Localizei seu endereço pela base da ViaCEP!");
+          showToast('Endereço localizado via ViaCEP!', 'success');
+        } catch (e) {
+          document.getElementById('cep-loader').classList.add('hidden');
+        }
+      }
+    }
+
+
+    // ================= NAVEGAÇÃO ENTRE ABAS =================
+    function clearError(errId, inputEl) {
+      const el = document.getElementById(errId);
+      if (el) el.classList.add('hidden');
+      if (inputEl) inputEl.classList.remove('error');
+    }
+
+    function switchTab(tabNum) {
+      if (tabNum > currentTab && !validateTabStep(currentTab)) return;
+
+      currentTab = tabNum;
+      playSound('step');
+
+      document.querySelectorAll('.tab-content').forEach((el, idx) => {
+        if (idx + 1 === tabNum) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+
+      for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById(`tab-btn-${i}`);
+        if (i === tabNum) {
+          btn.className = "tab-btn flex-1 min-w-[120px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all bg-purpleAbyss-700 text-white shadow-lg shadow-purpleAbyss-900/50";
+        } else {
+          btn.className = "tab-btn flex-1 min-w-[120px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-cyan-200 hover:bg-purpleAbyss-900/40";
+        }
+      }
+
+      const progressBar = document.getElementById('progress-bar');
+      const progressText = document.getElementById('progress-text');
+      const pct = Math.round((tabNum / 3) * 100);
+
+      progressBar.style.width = `${pct}%`;
+      progressText.innerText = `Passo ${tabNum} de 3 (${pct}%)`;
+
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const btnSubmit = document.getElementById('btn-submit');
+
+      if (tabNum === 1) {
+        btnPrev.disabled = true;
+        btnPrev.classList.add('opacity-40', 'cursor-not-allowed');
+      } else {
+        btnPrev.disabled = false;
+        btnPrev.classList.remove('opacity-40', 'cursor-not-allowed');
+      }
+
+      if (tabNum === 3) {
+        btnNext.classList.add('hidden');
+        btnSubmit.classList.remove('hidden');
+      } else {
+        btnNext.classList.remove('hidden');
+        btnSubmit.classList.add('hidden');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function navigateStep(direction) {
+      const next = currentTab + direction;
+      if (next >= 1 && next <= 3) switchTab(next);
+    }
+
+
+    // ================= VALIDAÇÃO DOS PASSOS DO FORMULÁRIO =================
+    function validateTabStep(step) {
+      let valid = true;
+
+      const triggerErr = (errId, inputId, msg) => {
+        const errEl = document.getElementById(errId);
+        const inp = document.getElementById(inputId);
+        if (errEl) errEl.classList.remove('hidden');
+        if (inp) inp.classList.add('error');
+        valid = false;
+        playSound('error');
+        speakSeahorse(msg);
+        showToast(msg, 'error');
+      };
+
+      if (step === 1) {
+        const nomeVal = document.getElementById('nome').value;
+        if (!validateNome(nomeVal)) {
+          triggerErr('err-nome', 'nome', "Por favor, informe seu nome completo (nome e sobrenome), apenas letras e espaços.");
+          return false;
+        }
+
+        const cpfVal = document.getElementById('cpf').value;
+        if (!validateCPF(cpfVal)) {
+          triggerErr('err-cpf', 'cpf', "CPF inválido. Verifique os números digitados.");
+          return false;
+        }
+
+        const dtVal = document.getElementById('dataNascimento').value;
+        if (!validateDataNascimento(dtVal)) {
+          triggerErr('err-dataNascimento', 'dataNascimento', "Data de nascimento inválida.");
+          return false;
+        }
+
+        const emailVal = document.getElementById('email').value;
+        if (!validateEmail(emailVal)) {
+          triggerErr('err-email', 'email', "Por favor, informe um e-mail válido.");
+          return false;
+        }
+
+        const telVal = document.getElementById('telefone').value;
+        if (!validateTelefone(telVal)) {
+          triggerErr('err-telefone', 'telefone', "Informe um número de telefone válido com DDD (10 ou 11 dígitos).");
+          return false;
+        }
+
+        const senhaVal = document.getElementById('senha').value;
+        const confirmVal = document.getElementById('confirmarSenha').value;
+        if (!validateSenha(senhaVal, confirmVal)) {
+          triggerErr('err-senha', 'senha', "As senhas não coincidem ou não possuem o mínimo de 8 caracteres.");
+          return false;
+        }
+      }
+
+      if (step === 2) {
+        const cepVal = document.getElementById('cep').value;
+        if (!validateCEP(cepVal)) {
+          triggerErr('err-cep', 'cep', "CEP inválido. O CEP deve conter 8 dígitos numéricos.");
+          return false;
+        }
+
+        const reqs = ['logradouro', 'numero', 'bairro', 'cidade', 'estado'];
+        for (let fId of reqs) {
+          const f = document.getElementById(fId);
+          if (!f.value.trim()) {
+            f.classList.add('error');
+            showToast('Preencha os dados do endereço.', 'error');
+            return false;
+          }
+        }
+      }
+
+      if (step === 3) {
+        const submarino = document.getElementById('submarino').value;
+        if (!submarino) {
+          document.getElementById('err-submarino').classList.remove('hidden');
+          showToast('Selecione um submarino.', 'error');
+          return false;
+        }
+      }
+
+      return valid;
+    }
+
+
+    // ================= SUBMISSÃO E CADASTRO =================
+    function handleFormSubmit(e) {
+      e.preventDefault();
+
+      if (!validateTabStep(1) || !validateTabStep(2) || !validateTabStep(3)) return;
+
+      const escuroOpt = document.querySelector('input[name="escuroSensitivity"]:checked').value;
+
+      const novoExplorador = {
+        id: Date.now(),
+        code: 'SUB-2026-' + Math.floor(10 + Math.random() * 90),
+        nome: document.getElementById('nome').value.trim(),
+        cpf: document.getElementById('cpf').value,
+        dataNascimento: document.getElementById('dataNascimento').value,
+        email: document.getElementById('email').value.trim(),
+        telefone: document.getElementById('telefone').value,
+        sensibilidadeEscuro: escuroOpt,
+        cep: document.getElementById('cep').value,
+        logradouro: document.getElementById('logradouro').value.trim(),
+        numero: document.getElementById('numero').value.trim(),
+        bairro: document.getElementById('bairro').value.trim(),
+        cidade: document.getElementById('cidade').value.trim(),
+        estado: document.getElementById('estado').value,
+        submarino: document.getElementById('submarino').value,
+        horario: document.getElementById('horario').value,
+        profundidade: document.getElementById('profundidade').value,
+        dataCadastro: new Date().toLocaleDateString('pt-BR')
+      };
+
+      exploradoresList.unshift(novoExplorador);
+      localStorage.setItem('subsea_exploradores_db', JSON.stringify(exploradoresList));
+
+      triggerConfetti();
+      playSound('success');
+      speakSeahorse("INSCRIÇÃO CONFIRMADA! Bem-vindo à Expedição Abissal! 🚀🌊");
+      showToast('Inscrição realizada com sucesso!', 'success');
+
+      document.getElementById('form-expedicao').reset();
+      toggleDarkWarning(false);
+      switchTab(1);
+      liveUpdatePassport();
+      renderExploradoresTable();
+    }
+
+
+    // ================= EFEITO CONFETI BIOLUMINESCENTE =================
+    function triggerConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#38bdf8', '#a78bfa', '#c4b5fd', '#34d399', '#f472b6'];
+
+      for (let i = 0; i < 110; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          size: Math.random() * 7 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vy: Math.random() * 4 + 2,
+          vx: Math.random() * 2 - 1,
+          rot: Math.random() * 360
+        });
+      }
+
+      let timer = 0;
+      function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        timer++;
+
+        particles.forEach(p => {
+          p.y += p.vy;
+          p.x += p.vx;
+          p.rot += 4;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+
+        if (timer < 160) requestAnimationFrame(loop);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      loop();
+    }
+
+
+    // ================= TABELA DE CADASTRADOS =================
+    function renderExploradoresTable(filtered = null) {
+      const tbody = document.getElementById('exploradores-table-body');
+      const data = filtered || exploradoresList;
+
+      if (data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="p-8 text-center text-slate-400">
+              <i class="fa-solid fa-water-ladder text-3xl mb-2 text-cyan-400/40 block"></i>
+              Nenhum explorador cadastrado até o momento.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = data.map(exp => `
+        <tr class="hover:bg-purpleAbyss-900/20 transition-all">
+          <td class="p-3 sm:p-4 font-semibold text-white">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-purpleAbyss-700 text-cyan-200 flex items-center justify-center font-bold text-xs border border-purpleAbyss-500/30">
+                ${exp.nome.charAt(0)}
+              </div>
+              <span class="truncate max-w-[140px] sm:max-w-[180px]">${exp.nome}</span>
+            </div>
+          </td>
+          <td class="p-3 sm:p-4 text-slate-300 font-mono text-xs">${exp.cpf}</td>
+          <td class="p-3 sm:p-4 text-slate-300">
+            <span class="block font-medium truncate max-w-[180px]">${exp.submarino}</span>
+            <span class="text-[10px] text-cyan-300 bg-slate-950 px-2 py-0.5 rounded-full inline-block mt-0.5 border border-purpleAbyss-500/20">
+              ${parseInt(exp.profundidade).toLocaleString('pt-BR')}m | ${exp.horario.split(' ')[0]}
+            </span>
+          </td>
+          <td class="p-3 sm:p-4 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="viewExploradorDetails(${exp.id})" type="button" class="p-2 rounded-xl bg-purpleAbyss-700/40 hover:bg-purpleAbyss-600 text-cyan-200 hover:text-white transition-all" title="Ver Detalhes">
+                <i class="fa-solid fa-eye text-xs"></i>
+              </button>
+              <button onclick="openConfirmModal(${exp.id})" type="button" class="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white transition-all" title="Excluir">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterExploradoresTable() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const filtered = exploradoresList.filter(e => e.nome.toLowerCase().includes(q) || e.cpf.includes(q));
+      renderExploradoresTable(filtered);
+    }
+
+    // Modal de Confirmação Personalizado (Sem uso do confirm do browser)
+    function openConfirmModal(id) {
+      deleteTargetId = id;
+      document.getElementById('confirm-delete-modal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      deleteTargetId = null;
+      document.getElementById('confirm-delete-modal').classList.add('hidden');
+    }
+
+    document.getElementById('btn-confirm-delete').addEventListener('click', () => {
+      if (deleteTargetId) {
+        exploradoresList = exploradoresList.filter(e => e.id !== deleteTargetId);
+        localStorage.setItem('subsea_exploradores_db', JSON.stringify(exploradoresList));
+        renderExploradoresTable();
+        showToast('Cadastro excluído.', 'info');
+        closeConfirmModal();
+      }
+    });
+
+    function viewExploradorDetails(id) {
+      const exp = exploradoresList.find(e => e.id === id);
+      if (!exp) return;
+
+      document.getElementById('modal-nome').innerText = exp.nome;
+      document.getElementById('modal-submarino').innerText = exp.submarino;
+      document.getElementById('modal-cpf').innerText = exp.cpf;
+      document.getElementById('modal-nasc').innerText = exp.dataNascimento.split('-').reverse().join('/');
+      document.getElementById('modal-telefone').innerText = exp.telefone;
+      document.getElementById('modal-email').innerText = exp.email;
+      document.getElementById('modal-endereco').innerText = `${exp.logradouro}, Nº ${exp.numero} - ${exp.bairro}, ${exp.cidade} - ${exp.estado} (CEP: ${exp.cep})`;
+      document.getElementById('modal-horario').innerText = exp.horario;
+      document.getElementById('modal-profundidade').innerText = `${parseInt(exp.profundidade).toLocaleString('pt-BR')} metros`;
+
+      document.getElementById('details-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('details-modal').classList.add('hidden');
+    }
+
+
+    // ================= TOAST NOTIFICAÇÃO =================
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.innerText = msg;
+
+      if (type === 'error') {
+        toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold bg-rose-950 text-rose-200 border border-rose-500/50 transition-all duration-300 opacity-100 translate-y-0";
+        toastIcon.className = "fa-solid fa-triangle-exclamation text-rose-400 text-base";
+      } else if (type === 'success') {
+        toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold bg-emerald-950 text-emerald-200 border border-emerald-500/50 transition-all duration-300 opacity-100 translate-y-0";
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400 text-base";
+      } else {
+        toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold bg-purpleAbyss-950 text-cyan-200 border border-cyan-500/50 transition-all duration-300 opacity-100 translate-y-0";
+        toastIcon.className = "fa-solid fa-circle-info text-cyan-400 text-base";
+      }
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-10');
+      }, 4000);
+    }
+
+
+    // INICIALIZAÇÃO DA APLICAÇÃO
+    window.onload = function() {
+      initOceanBackground();
+      init3DSubmarine();
+      renderExploradoresTable();
+      liveUpdatePassport();
+    };
+  </script>
+</body>
+</html>

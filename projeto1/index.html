@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SENAI | Cadastro Interativo de Alunos</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fontes Google & FontAwesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+              950: '#1e0a45',
+            }
+          },
+          animation: {
+            'float': 'float 3.5s ease-in-out infinite',
+            'pulse-glow': 'pulseGlow 2s infinite',
+            'shimmer': 'shimmer 2.5s infinite linear',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' },
+            },
+            pulseGlow: {
+              '0%, 100%': { opacity: '0.6', filter: 'drop-shadow(0 0 10px rgba(139, 92, 246, 0.6))' },
+              '50%': { opacity: '1', filter: 'drop-shadow(0 0 22px rgba(167, 139, 250, 0.9))' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos de fundo e Glassmorphism */
+    body {
+      background: radial-gradient(circle at 15% 15%, #2e1065 0%, #0f172a 55%, #020617 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      touch-action: manipulation;
+    }
+
+    .glass-card {
+      background: rgba(30, 16, 68, 0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(167, 139, 250, 0.22);
+    }
+
+    .glass-card-hover:hover {
+      border-color: rgba(167, 139, 250, 0.45);
+      box-shadow: 0 0 25px rgba(124, 58, 237, 0.25);
+    }
+
+    .glass-input {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #f8fafc;
+      transition: all 0.2s ease-in-out;
+      font-size: 16px; /* Evita auto-zoom no iOS */
+    }
+
+    @media (min-width: 640px) {
+      .glass-input {
+        font-size: 0.875rem; /* 14px em telas maiores */
+      }
+    }
+
+    .glass-input:focus {
+      background: rgba(15, 23, 42, 0.9);
+      border-color: #c4b5fd;
+      box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
+      outline: none;
+    }
+
+    .glass-input.error {
+      border-color: #f43f5e !important;
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.4) !important;
+    }
+
+    /* Olhos do mascote */
+    .pupil {
+      transition: transform 0.04s linear;
+    }
+
+    /* Hologram Effect */
+    .hologram-overlay {
+      background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 40%, rgba(167,139,250,0.2) 60%, rgba(255,255,255,0.25) 100%);
+      background-size: 200% 200%;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #6d28d9;
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="relative min-h-full flex flex-col justify-between p-3 sm:p-6 md:p-8 antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ================= CANVAS PARA CONFETES ================= -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+  <!-- ================= MASCOTE RAPOSINHA ROXA "LUPO" (POSIÇÃO EXATA top:10px; right:15px) ================= -->
+  <div id="fox-mascot-container" class="fixed top-[10px] right-[15px] z-50 flex flex-col items-end pointer-events-auto select-none">
+    
+    <!-- Balão de Fala do Mascote -->
+    <div id="fox-bubble" class="bg-brand-900/95 text-brand-100 text-xs font-semibold px-3.5 py-2 rounded-2xl rounded-tr-none shadow-2xl border border-brand-400/40 mb-1.5 max-w-[180px] sm:max-w-[220px] backdrop-blur-md transition-all duration-300 opacity-100 transform translate-y-0 text-right leading-tight">
+      <span id="fox-speech">Olá! Sou o **Lupo**! Vamos fazer seu cadastro no SENAI? 🦊</span>
+    </div>
+
+    <!-- Figura SVG do Mascote com Expressões e Olhos Animados -->
+    <div class="relative group cursor-pointer" onclick="triggerFoxInteraction()" title="Clique para interagir com o Lupo!">
+      <svg id="fox-svg" class="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-[0_8px_20px_rgba(139,92,246,0.5)] transition-transform duration-200 active:scale-90" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        
+        <!-- Orelhas com Gradiente -->
+        <g id="fox-ears">
+          <path d="M28 48L10 16C10 16 34 20 42 38Z" fill="#7c3aed" stroke="#4c1d95" stroke-width="2"/>
+          <path d="M26 44L15 21C15 21 32 24 37 36Z" fill="#f472b6"/>
+          
+          <path d="M92 48L110 16C110 16 86 20 78 38Z" fill="#7c3aed" stroke="#4c1d95" stroke-width="2"/>
+          <path d="M94 44L105 21C105 21 88 24 83 36Z" fill="#f472b6"/>
+        </g>
+
+        <!-- Cabeça -->
+        <path d="M22 62C22 38 38 30 60 30C82 30 98 38 98 62C98 82 85 96 60 96C35 96 22 82 22 62Z" fill="url(#fox-grad)"/>
+
+        <!-- Bochechas Brancas -->
+        <path d="M24 64C24 64 38 88 60 88C82 88 96 64 96 64C96 78 82 96 60 96C38 96 24 78 24 64Z" fill="#ffffff"/>
+
+        <!-- Olho Esquerdo -->
+        <g id="eye-socket-left">
+          <ellipse cx="44" cy="56" rx="9" ry="11" fill="#ffffff" stroke="#2e1065" stroke-width="1.5"/>
+          <circle id="pupil-left" class="pupil" cx="44" cy="56" r="4.5" fill="#1e0a45"/>
+          <circle cx="42.5" cy="53.5" r="1.5" fill="#ffffff"/>
+        </g>
+
+        <!-- Olho Direito -->
+        <g id="eye-socket-right">
+          <ellipse cx="76" cy="56" rx="9" ry="11" fill="#ffffff" stroke="#2e1065" stroke-width="1.5"/>
+          <circle id="pupil-right" class="pupil" cx="76" cy="56" r="4.5" fill="#1e0a45"/>
+          <circle cx="74.5" cy="53.5" r="1.5" fill="#ffffff"/>
+        </g>
+
+        <!-- Pálpebras (Piscada) -->
+        <ellipse id="eyelid-left" cx="44" cy="56" rx="9.5" ry="0" fill="#7c3aed"/>
+        <ellipse id="eyelid-right" cx="76" cy="56" rx="9.5" ry="0" fill="#7c3aed"/>
+
+        <!-- Sobrancelhas Reativas -->
+        <path id="brow-left" d="M36 43Q44 41 48 44" stroke="#2e1065" stroke-width="2" stroke-linecap="round"/>
+        <path id="brow-right" d="M84 43Q76 41 72 44" stroke="#2e1065" stroke-width="2" stroke-linecap="round"/>
+
+        <!-- Nariz -->
+        <ellipse cx="60" cy="71" rx="4.5" ry="3" fill="#1e0a45"/>
+
+        <!-- Boca / Sorriso -->
+        <path id="fox-mouth" d="M54 78Q60 83 66 78" stroke="#1e0a45" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+        <!-- Rubor nas Bochechas -->
+        <circle cx="33" cy="68" r="4" fill="#f472b6" opacity="0.6"/>
+        <circle cx="87" cy="68" r="4" fill="#f472b6" opacity="0.6"/>
+
+        <!-- Patinhas na Base -->
+        <ellipse cx="42" cy="95" rx="7" ry="4.5" fill="#5b21b6"/>
+        <ellipse cx="78" cy="95" rx="7" ry="4.5" fill="#5b21b6"/>
+
+        <defs>
+          <linearGradient id="fox-grad" x1="60" y1="30" x2="60" y2="96" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#8b5cf6"/>
+            <stop offset="1" stop-color="#6d28d9"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ================= CABEÇALHO DA APLICAÇÃO ================= -->
+  <header class="max-w-7xl mx-auto w-full mb-6 pr-24 sm:pr-28 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-600/40 border border-brand-300/30">
+        <i class="fa-solid fa-graduation-cap text-xl sm:text-2xl text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-extrabold uppercase tracking-widest bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded-md border border-brand-500/30">SENAI</span>
+          <span class="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Online
+          </span>
+        </div>
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-brand-100 to-brand-300">
+          Portal de Cadastro Acadêmico
+        </h1>
+      </div>
+    </div>
+
+    <!-- Controles do Topo (Som Mudo/Ativo & Botão Ver Crachá no Mobile) -->
+    <div class="flex items-center gap-2 self-start sm:self-auto">
+      <button onclick="toggleAudio()" id="btn-audio" type="button" class="glass-card px-3 py-2 rounded-xl text-xs font-semibold text-brand-200 hover:text-white flex items-center gap-2 transition-all">
+        <i id="audio-icon" class="fa-solid fa-volume-high text-brand-400"></i>
+        <span id="audio-status" class="hidden sm:inline">Som Ativo</span>
+      </button>
+
+      <!-- Botão Flutuante/Mobile para abrir o Crachá Digital -->
+      <button onclick="toggleMobileBadgeDrawer()" type="button" class="lg:hidden glass-card px-3 py-2 rounded-xl text-xs font-semibold text-brand-300 hover:text-white flex items-center gap-2 border-brand-400/40 bg-brand-900/40">
+        <i class="fa-solid fa-id-card text-brand-400"></i>
+        <span>Ver Crachá</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= CONTEÚDO PRINCIPAL (GRID RESPONSIVO) ================= -->
+  <main class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start mb-10">
+    
+    <!-- COLUNA DA ESQUERDA: FORMULÁRIO EM ABAS (lg:col-span-7 ou 8) -->
+    <section class="lg:col-span-7 xl:col-span-8 w-full glass-card rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl shadow-brand-950/80 relative">
+      
+      <!-- Indicador de Progresso com Porcentagem -->
+      <div class="mb-6">
+        <div class="flex justify-between items-center text-xs font-bold text-brand-200 mb-2">
+          <span class="uppercase tracking-wider">Progresso da Matrícula</span>
+          <span id="progress-text" class="text-brand-400 font-mono">Passo 1 de 3 (33%)</span>
+        </div>
+        <div class="w-full bg-slate-950/80 rounded-full h-2.5 overflow-hidden border border-brand-500/30 p-0.5">
+          <div id="progress-bar" class="bg-gradient-to-r from-brand-600 via-brand-400 to-fuchsia-400 h-full rounded-full w-1/3 transition-all duration-500 ease-out"></div>
+        </div>
+      </div>
+
+      <!-- Navegação por Abas (Tabs) -->
+      <nav class="flex border-b border-brand-500/20 mb-6 gap-1.5 sm:gap-3 overflow-x-auto pb-2 scrollbar-none" aria-label="Passos do Cadastro">
+        <button type="button" onclick="switchTab(1)" id="tab-btn-1" class="tab-btn flex-1 min-w-[120px] sm:min-w-[140px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all bg-brand-600 text-white shadow-lg shadow-brand-600/40">
+          <i class="fa-solid fa-user-gear text-xs"></i>
+          <span>1. Pessoais</span>
+        </button>
+
+        <button type="button" onclick="switchTab(2)" id="tab-btn-2" class="tab-btn flex-1 min-w-[120px] sm:min-w-[140px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-brand-200 hover:bg-brand-900/40">
+          <i class="fa-solid fa-location-dot text-xs"></i>
+          <span>2. Endereço</span>
+        </button>
+
+        <button type="button" onclick="switchTab(3)" id="tab-btn-3" class="tab-btn flex-1 min-w-[120px] sm:min-w-[140px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-brand-200 hover:bg-brand-900/40">
+          <i class="fa-solid fa-graduation-cap text-xs"></i>
+          <span>3. Curso SENAI</span>
+        </button>
+      </nav>
+
+      <!-- FORMULÁRIO PRINCIPAL -->
+      <form id="form-cadastro" onsubmit="handleFormSubmit(event)" novalidate>
+        
+        <!-- ================= ABA 1: DADOS PESSOAIS ================= -->
+        <div id="tab-content-1" class="tab-content space-y-4 sm:space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            
+            <!-- Nome Completo -->
+            <div class="sm:col-span-2">
+              <label for="nome" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Nome Completo <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="nome" name="nome" placeholder="Ex: Carlos Eduardo da Silva" oninput="liveUpdateBadge(); clearError('err-nome', this);" onfocus="speakMascot('Preencha seu nome completo com nome e sobrenome!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-nome" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Por favor, informe seu nome completo (nome e sobrenome), apenas letras e espaços</span>
+              </p>
+            </div>
+
+            <!-- CPF -->
+            <div>
+              <label for="cpf" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                CPF <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-id-card absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="cpf" name="cpf" maxlength="14" placeholder="000.000.000-00" oninput="maskCPF(this); liveUpdateBadge(); clearError('err-cpf', this);" onfocus="speakMascot('Vou verificar a validade do seu CPF automaticamente!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-cpf" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>CPF inválido. Verifique os números digitados.</span>
+              </p>
+            </div>
+
+            <!-- Data de Nascimento -->
+            <div>
+              <label for="dataNascimento" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Data de Nascimento <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-calendar-day absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="date" id="dataNascimento" name="dataNascimento" oninput="clearError('err-dataNascimento', this)" onfocus="speakMascot('A data de nascimento não pode ser no futuro nem antes de 1900.')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-dataNascimento" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Data de nascimento inválida.</span>
+              </p>
+            </div>
+
+            <!-- E-mail -->
+            <div>
+              <label for="email" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                E-mail <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" oninput="clearError('err-email', this)" onfocus="speakMascot('Informe um e-mail válido para receber comunicados!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-email" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Por favor, informe um e-mail válido.</span>
+              </p>
+            </div>
+
+            <!-- Telefone -->
+            <div>
+              <label for="telefone" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Telefone / Celular <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-phone absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="tel" id="telefone" name="telefone" maxlength="15" placeholder="(00) 90000-0000" oninput="maskTelefone(this); clearError('err-telefone', this);" onfocus="speakMascot('Informe o telefone com DDD (10 ou 11 dígitos).')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+              <p id="err-telefone" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Informe um número de telefone válido com DDD (10 ou 11 dígitos).</span>
+              </p>
+            </div>
+
+            <!-- Senha -->
+            <div>
+              <label for="senha" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Senha de Acesso <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-key absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="password" id="senha" name="senha" placeholder="Mínimo de 8 caracteres" oninput="clearError('err-senha', this)" onfocus="speakMascot('A senha deve ter pelo menos 8 caracteres.')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Confirmação de Senha -->
+            <div>
+              <label for="confirmarSenha" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Confirmar Senha <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="password" id="confirmarSenha" name="confirmarSenha" placeholder="Repita a senha" oninput="clearError('err-senha', this)" onfocus="speakMascot('Repita exatamente a mesma senha digitada!')" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <p id="err-senha" class="hidden text-rose-400 text-xs mt-1 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>As senhas não coincidem ou não possuem o mínimo de 8 caracteres.</span>
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================= ABA 2: ENDEREÇO ================= -->
+        <div id="tab-content-2" class="tab-content hidden space-y-4 sm:space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+            
+            <!-- CEP -->
+            <div class="sm:col-span-1">
+              <label for="cep" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                CEP <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-map-pin absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="cep" name="cep" maxlength="9" placeholder="00000-000" oninput="maskCEP(this); checkCEPAutoSearch(this); clearError('err-cep', this);" onfocus="speakMascot('Digite o CEP para consultar seu endereço automaticamente!')" class="glass-input w-full pl-10 pr-10 py-3 rounded-xl text-sm" required>
+                <div id="cep-loader" class="hidden absolute right-3 top-3.5">
+                  <i class="fa-solid fa-circle-notch fa-spin text-brand-400"></i>
+                </div>
+              </div>
+              <p id="err-cep" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>CEP inválido. O CEP deve conter 8 dígitos numéricos.</span>
+              </p>
+            </div>
+
+            <!-- Logradouro (Rua/Avenida) -->
+            <div class="sm:col-span-2">
+              <label for="logradouro" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Logradouro (Rua / Av.) <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-road absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="logradouro" name="logradouro" placeholder="Ex: Av. Paulista" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Número -->
+            <div>
+              <label for="numero" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Número <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-hashtag absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="numero" name="numero" placeholder="Ex: 1500" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Bairro -->
+            <div>
+              <label for="bairro" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Bairro <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-building-user absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="bairro" name="bairro" placeholder="Nome do bairro" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Cidade -->
+            <div>
+              <label for="cidade" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Cidade <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-city absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <input type="text" id="cidade" name="cidade" placeholder="Nome da cidade" class="glass-input w-full pl-10 pr-4 py-3 rounded-xl text-sm" required>
+              </div>
+            </div>
+
+            <!-- Estado (UF) -->
+            <div class="sm:col-span-3">
+              <label for="estado" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Estado (UF) <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-map-location-dot absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <select id="estado" name="estado" class="glass-input w-full pl-10 pr-8 py-3 rounded-xl text-sm appearance-none bg-slate-900" required>
+                  <option value="" disabled selected>Selecione o Estado</option>
+                  <option value="AC">Acre (AC)</option>
+                  <option value="AL">Alagoas (AL)</option>
+                  <option value="AP">Amapá (AP)</option>
+                  <option value="AM">Amazonas (AM)</option>
+                  <option value="BA">Bahia (BA)</option>
+                  <option value="CE">Ceará (CE)</option>
+                  <option value="DF">Distrito Federal (DF)</option>
+                  <option value="ES">Espírito Santo (ES)</option>
+                  <option value="GO">Goiás (GO)</option>
+                  <option value="MA">Maranhão (MA)</option>
+                  <option value="MT">Mato Grosso (MT)</option>
+                  <option value="MS">Mato Grosso do Sul (MS)</option>
+                  <option value="MG">Minas Gerais (MG)</option>
+                  <option value="PA">Pará (PA)</option>
+                  <option value="PB">Paraíba (PB)</option>
+                  <option value="PR">Paraná (PR)</option>
+                  <option value="PE">Pernambuco (PE)</option>
+                  <option value="PI">Piauí (PI)</option>
+                  <option value="RJ">Rio de Janeiro (RJ)</option>
+                  <option value="RN">Rio Grande do Norte (RN)</option>
+                  <option value="RS">Rio Grande do Sul (RS)</option>
+                  <option value="RO">Rondônia (RO)</option>
+                  <option value="RR">Roraima (RR)</option>
+                  <option value="SC">Santa Catarina (SC)</option>
+                  <option value="SP">São Paulo (SP)</option>
+                  <option value="SE">Sergipe (SE)</option>
+                  <option value="TO">Tocantins (TO)</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3.5 top-4 text-xs text-brand-400/60 pointer-events-none"></i>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================= ABA 3: DADOS DO CURSO SENAI ================= -->
+        <div id="tab-content-3" class="tab-content hidden space-y-4 sm:space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            
+            <!-- Nome do Curso -->
+            <div class="sm:col-span-2">
+              <label for="nomeCurso" class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-1">
+                Nome do Curso SENAI <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="relative">
+                <i class="fa-solid fa-book-open-reader absolute left-3.5 top-3.5 text-brand-400/60 text-sm"></i>
+                <select id="nomeCurso" name="nomeCurso" onchange="liveUpdateBadge()" onfocus="speakMascot('Escolha o curso SENAI no qual deseja se matricular!')" class="glass-input w-full pl-10 pr-8 py-3 rounded-xl text-sm appearance-none bg-slate-900" required>
+                  <option value="" disabled selected>Selecione um curso oferecido pelo SENAI</option>
+                  <option value="Técnico em Desenvolvimento de Sistemas">Técnico em Desenvolvimento de Sistemas</option>
+                  <option value="Técnico em Mecatrônica">Técnico em Mecatrônica</option>
+                  <option value="Técnico em Eletrotécnica">Técnico em Eletrotécnica</option>
+                  <option value="Técnico em Automação Industrial">Técnico em Automação Industrial</option>
+                  <option value="Técnico em Cibersegurança">Técnico em Cibersegurança</option>
+                  <option value="Técnico em Logística">Técnico em Logística</option>
+                  <option value="Mecânico de Usinagem">Mecânico de Usinagem</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3.5 top-4 text-xs text-brand-400/60 pointer-events-none"></i>
+              </div>
+              <p id="err-curso" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Por favor, selecione um curso SENAI.</span>
+              </p>
+            </div>
+
+            <!-- Turno -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-2">
+                Turno <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="cursor-pointer">
+                  <input type="radio" name="turno" value="Manhã" onchange="liveUpdateBadge()" class="peer sr-only" required>
+                  <div class="glass-input p-2.5 sm:p-3 rounded-xl text-center text-xs font-bold peer-checked:bg-brand-600 peer-checked:border-brand-300 peer-checked:text-white transition-all hover:bg-brand-900/40">
+                    <i class="fa-solid fa-sun block text-sm mb-1 text-amber-400"></i>
+                    Manhã
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="turno" value="Tarde" onchange="liveUpdateBadge()" class="peer sr-only" required>
+                  <div class="glass-input p-2.5 sm:p-3 rounded-xl text-center text-xs font-bold peer-checked:bg-brand-600 peer-checked:border-brand-300 peer-checked:text-white transition-all hover:bg-brand-900/40">
+                    <i class="fa-solid fa-cloud-sun block text-sm mb-1 text-orange-400"></i>
+                    Tarde
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="turno" value="Noite" onchange="liveUpdateBadge()" class="peer sr-only" required>
+                  <div class="glass-input p-2.5 sm:p-3 rounded-xl text-center text-xs font-bold peer-checked:bg-brand-600 peer-checked:border-brand-300 peer-checked:text-white transition-all hover:bg-brand-900/40">
+                    <i class="fa-solid fa-moon block text-sm mb-1 text-indigo-300"></i>
+                    Noite
+                  </div>
+                </label>
+              </div>
+              <p id="err-turno" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Selecione o turno das aulas.</span>
+              </p>
+            </div>
+
+            <!-- Modalidade -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-brand-200 mb-2">
+                Modalidade <span class="text-fuchsia-400">*</span>
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="cursor-pointer">
+                  <input type="radio" name="modalidade" value="Presencial" onchange="liveUpdateBadge()" class="peer sr-only" required>
+                  <div class="glass-input p-2.5 sm:p-3 rounded-xl text-center text-xs font-bold peer-checked:bg-brand-600 peer-checked:border-brand-300 peer-checked:text-white transition-all hover:bg-brand-900/40">
+                    <i class="fa-solid fa-chalkboard-user block text-sm mb-1 text-emerald-400"></i>
+                    Presencial
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="modalidade" value="EAD" onchange="liveUpdateBadge()" class="peer sr-only" required>
+                  <div class="glass-input p-2.5 sm:p-3 rounded-xl text-center text-xs font-bold peer-checked:bg-brand-600 peer-checked:border-brand-300 peer-checked:text-white transition-all hover:bg-brand-900/40">
+                    <i class="fa-solid fa-laptop-code block text-sm mb-1 text-cyan-400"></i>
+                    EAD (Online)
+                  </div>
+                </label>
+              </div>
+              <p id="err-modalidade" class="hidden text-rose-400 text-xs mt-1.5 font-medium flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Selecione a modalidade.</span>
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- BOTÕES DE NAVEGAÇÃO -->
+        <div class="flex items-center justify-between mt-8 pt-6 border-t border-brand-500/20 gap-3">
+          <button type="button" id="btn-prev" onclick="navigateStep(-1)" class="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all opacity-40 cursor-not-allowed flex items-center gap-2" disabled>
+            <i class="fa-solid fa-arrow-left text-xs"></i>
+            <span>Anterior</span>
+          </button>
+
+          <button type="button" id="btn-next" onclick="navigateStep(1)" class="px-5 sm:px-7 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white shadow-lg shadow-brand-600/40 transition-all flex items-center gap-2">
+            <span>Próximo Passo</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+
+          <button type="submit" id="btn-submit" class="hidden px-6 sm:px-8 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-xl shadow-emerald-500/30 transition-all flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-sm"></i>
+            <span>Concluir Cadastro</span>
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- COLUNA DA DIREITA: CRACHÁ DIGITAL EM TEMPO REAL (DESKTOP) -->
+    <aside id="badge-aside" class="lg:col-span-5 xl:col-span-4 w-full space-y-6">
+      
+      <!-- Card do Crachá Digital Holográfico -->
+      <div class="glass-card rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden border border-brand-400/30 group">
+        
+        <!-- Efeito Holográfico Brilhante -->
+        <div class="absolute inset-0 hologram-overlay opacity-30 pointer-events-none group-hover:opacity-60 transition-opacity duration-500"></div>
+
+        <!-- Topo do Crachá com Logo SENAI -->
+        <div class="flex items-center justify-between mb-5 border-b border-brand-500/30 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-extrabold text-xs tracking-wider">
+              SENAI
+            </div>
+            <div>
+              <p class="text-[10px] font-extrabold uppercase tracking-widest text-brand-300">CRACHÁ DIGITAL</p>
+              <p class="text-[9px] text-slate-400">Identificação Estudantil</p>
+            </div>
+          </div>
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Ativo
+          </span>
+        </div>
+
+        <!-- Foto de Perfil & Dados do Aluno -->
+        <div class="flex flex-col items-center text-center my-2">
+          <!-- Avatar Animado Dinâmico -->
+          <div class="relative mb-3">
+            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-brand-600 via-fuchsia-500 to-indigo-500 p-1 shadow-xl shadow-brand-600/40">
+              <div id="badge-avatar-bg" class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                <span id="badge-initials" class="text-2xl sm:text-3xl font-extrabold text-brand-200 uppercase">
+                  SN
+                </span>
+              </div>
+            </div>
+            <div class="absolute bottom-0 right-0 bg-brand-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow-md border border-slate-900">
+              <i class="fa-solid fa-camera"></i>
+            </div>
+          </div>
+
+          <!-- Nome no Crachá -->
+          <h2 id="badge-nome" class="text-base sm:text-lg font-extrabold text-white truncate max-w-[240px]">
+            Nome do Aluno
+          </h2>
+          <p id="badge-curso" class="text-xs text-brand-300 font-medium mt-0.5 max-w-[230px] truncate">
+            Selecione o Curso SENAI
+          </p>
+        </div>
+
+        <!-- Grade de Detalhes -->
+        <div class="grid grid-cols-2 gap-2 text-left bg-slate-950/60 p-3 rounded-2xl border border-brand-500/20 text-[11px] my-4">
+          <div>
+            <span class="text-[9px] font-bold uppercase tracking-wider text-brand-400/80 block">Matrícula (R.A.)</span>
+            <span id="badge-ra" class="font-mono font-bold text-white">2026-88491</span>
+          </div>
+          <div>
+            <span class="text-[9px] font-bold uppercase tracking-wider text-brand-400/80 block">Turno / Modalidade</span>
+            <span id="badge-turno-mod" class="font-semibold text-brand-100">--- / ---</span>
+          </div>
+        </div>
+
+        <!-- Código de Barras do Crachá (SVG) -->
+        <div class="flex flex-col items-center justify-center pt-2 border-t border-brand-500/20">
+          <svg class="h-9 w-full max-w-[200px]" opacity="0.8" viewBox="0 0 160 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" width="3" height="35" fill="#f8fafc"/>
+            <rect x="5" width="2" height="35" fill="#f8fafc"/>
+            <rect x="9" width="6" height="35" fill="#f8fafc"/>
+            <rect x="17" width="2" height="35" fill="#f8fafc"/>
+            <rect x="22" width="4" height="35" fill="#f8fafc"/>
+            <rect x="28" width="2" height="35" fill="#f8fafc"/>
+            <rect x="32" width="5" height="35" fill="#f8fafc"/>
+            <rect x="40" width="3" height="35" fill="#f8fafc"/>
+            <rect x="45" width="2" height="35" fill="#f8fafc"/>
+            <rect x="50" width="7" height="35" fill="#f8fafc"/>
+            <rect x="60" width="2" height="35" fill="#f8fafc"/>
+            <rect x="64" width="4" height="35" fill="#f8fafc"/>
+            <rect x="71" width="3" height="35" fill="#f8fafc"/>
+            <rect x="76" width="2" height="35" fill="#f8fafc"/>
+            <rect x="80" width="6" height="35" fill="#f8fafc"/>
+            <rect x="88" width="2" height="35" fill="#f8fafc"/>
+            <rect x="92" width="5" height="35" fill="#f8fafc"/>
+            <rect x="100" width="3" height="35" fill="#f8fafc"/>
+            <rect x="105" width="2" height="35" fill="#f8fafc"/>
+            <rect x="110" width="6" height="35" fill="#f8fafc"/>
+            <rect x="118" width="4" height="35" fill="#f8fafc"/>
+            <rect x="124" width="2" height="35" fill="#f8fafc"/>
+            <rect x="128" width="5" height="35" fill="#f8fafc"/>
+            <rect x="135" width="3" height="35" fill="#f8fafc"/>
+            <rect x="140" width="2" height="35" fill="#f8fafc"/>
+            <rect x="145" width="6" height="35" fill="#f8fafc"/>
+            <rect x="153" width="3" height="35" fill="#f8fafc"/>
+          </svg>
+          <span class="text-[9px] font-mono text-brand-300 tracking-widest mt-1">SENAI-ACADEMIC-PASS</span>
+        </div>
+
+      </div>
+
+      <!-- Dica Rápida em Card -->
+      <div class="glass-card rounded-2xl p-4 text-xs text-brand-200/90 flex items-start gap-3 border border-brand-500/20">
+        <div class="w-8 h-8 rounded-xl bg-brand-600/30 text-brand-300 flex items-center justify-center flex-shrink-0 text-sm">
+          <i class="fa-solid fa-lightbulb"></i>
+        </div>
+        <p class="leading-relaxed">
+          Seus dados são sincronizados instantaneamente no crachá virtual enquanto você preenche o formulário.
+        </p>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- ================= SEÇÃO: LISTA DE ALUNOS CADASTRADOS ================= -->
+  <section class="max-w-7xl mx-auto w-full glass-card rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl mb-12">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div>
+        <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-users-viewfinder text-brand-400"></i>
+          <span>Alunos Matriculados</span>
+        </h2>
+        <p class="text-xs text-brand-200/70">Registros gravados no banco de dados local do navegador</p>
+      </div>
+
+      <!-- Busca Dinâmica -->
+      <div class="relative w-full sm:w-72">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-brand-400/60 text-xs"></i>
+        <input type="text" id="search-input" onkeyup="filterAlunosTable()" placeholder="Buscar por nome ou CPF..." class="glass-input w-full pl-9 pr-3 py-2 rounded-xl text-xs">
+      </div>
+    </div>
+
+    <!-- Tabela Responsiva de Alunos -->
+    <div class="overflow-x-auto rounded-2xl border border-brand-500/20 bg-slate-950/40">
+      <table class="w-full text-left text-xs sm:text-sm">
+        <thead class="bg-brand-950/80 text-brand-200 uppercase tracking-wider text-[10px] sm:text-xs">
+          <tr>
+            <th class="p-3 sm:p-4">Aluno</th>
+            <th class="p-3 sm:p-4">CPF</th>
+            <th class="p-3 sm:p-4">Curso / Turno</th>
+            <th class="p-3 sm:p-4 text-center">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="alunos-table-body" class="divide-y divide-brand-500/10">
+          <!-- Renderizado via JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= MODAL DETALHES DO ALUNO ================= -->
+  <div id="details-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+    <div class="glass-card bg-slate-900/95 max-w-md w-full rounded-3xl p-6 shadow-2xl border border-brand-500/40 relative animate-float">
+      <button onclick="closeModal()" type="button" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white text-lg font-bold">
+          <i class="fa-solid fa-user-graduate"></i>
+        </div>
+        <div>
+          <h3 id="modal-nome" class="text-base font-bold text-white truncate max-w-[220px]">Nome do Aluno</h3>
+          <p id="modal-curso" class="text-xs text-brand-300">Curso SENAI</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300">
+        <div class="grid grid-cols-2 gap-2 p-3 bg-slate-950/70 rounded-xl border border-brand-500/20">
+          <div>
+            <span class="text-brand-400 text-[9px] uppercase font-bold block">CPF</span>
+            <span id="modal-cpf" class="font-mono text-white">-</span>
+          </div>
+          <div>
+            <span class="text-brand-400 text-[9px] uppercase font-bold block">Nascimento</span>
+            <span id="modal-nasc" class="text-white">-</span>
+          </div>
+          <div>
+            <span class="text-brand-400 text-[9px] uppercase font-bold block">Telefone</span>
+            <span id="modal-telefone" class="text-white">-</span>
+          </div>
+          <div>
+            <span class="text-brand-400 text-[9px] uppercase font-bold block">E-mail</span>
+            <span id="modal-email" class="text-white truncate block">-</span>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-950/70 rounded-xl border border-brand-500/20">
+          <span class="text-brand-400 text-[9px] uppercase font-bold block mb-1">Endereço Completo</span>
+          <p id="modal-endereco" class="text-white leading-relaxed">-</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 p-3 bg-slate-950/70 rounded-xl border border-brand-500/20">
+          <div>
+            <span class="text-brand-400 text-[9px] uppercase font-bold block">Turno</span>
+            <span id="modal-turno" class="text-white font-semibold">-</span>
+          </div>
+          <div>
+            <span class="text-brand-400 text-[9px] uppercase font-bold block">Modalidade</span>
+            <span id="modal-modalidade" class="text-white font-semibold">-</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeModal()" type="button" class="px-5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-lg">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= DRAWER MODAL PARA MOBILE (VER CRACHÁ NO CELULAR) ================= -->
+  <div id="mobile-badge-drawer" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-end justify-center p-0 lg:hidden hidden transition-all duration-300">
+    <div class="glass-card bg-slate-900/95 w-full rounded-t-3xl p-5 shadow-2xl border-t border-brand-500/40 relative max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-white">Visualização do Crachá Virtual</h3>
+        <button onclick="toggleMobileBadgeDrawer()" type="button" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div id="mobile-badge-container">
+        <!-- O crachá será clonado aqui para mobile -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NOTIFICAÇÃO TOAST ================= -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-semibold transition-all duration-300 opacity-0 translate-y-10 pointer-events-none max-w-[90vw]">
+    <i id="toast-icon" class="text-base"></i>
+    <span id="toast-msg">Mensagem Toast</span>
+  </div>
+
+  <!-- RODAPÉ -->
+  <footer class="max-w-7xl mx-auto w-full text-center text-xs text-brand-300/60 py-4">
+    <p>© 2026 Serviço Nacional de Aprendizagem Industrial - SENAI</p>
+  </footer>
+
+  <!-- ================= LÓGICA JAVASCRIPT ================= -->
+  <script>
+    // ESTADO DA APLICAÇÃO
+    let currentTab = 1;
+    let audioEnabled = true;
+    let alunosList = JSON.parse(localStorage.getItem('senai_alunos_db')) || [];
+
+    // Web Audio API Context
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!audioEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'step') {
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.15);
+        } else if (type === 'error') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
+          gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'success') {
+          // Fanfarra de Sucesso
+          const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+          notes.forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.1);
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime + idx * 0.1);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.1 + 0.3);
+            o.start(audioCtx.currentTime + idx * 0.1);
+            o.stop(audioCtx.currentTime + idx * 0.1 + 0.3);
+          });
+        }
+      } catch (e) {
+        // Áudio ignorado se não suportado
+      }
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const statusEl = document.getElementById('audio-status');
+      const iconEl = document.getElementById('audio-icon');
+
+      if (audioEnabled) {
+        statusEl.innerText = 'Som Ativo';
+        iconEl.className = 'fa-solid fa-volume-high text-brand-400';
+      } else {
+        statusEl.innerText = 'Muted';
+        iconEl.className = 'fa-solid fa-volume-xmark text-slate-500';
+      }
+    }
+
+
+    // ================= RASTREAMENTO DO MASCOTE LUPO (MOUSE & TOUCH) =================
+    const pupilLeft = document.getElementById('pupil-left');
+    const pupilRight = document.getElementById('pupil-right');
+    const eyeSocketLeft = document.getElementById('eye-socket-left');
+    const eyeSocketRight = document.getElementById('eye-socket-right');
+    const foxSpeech = document.getElementById('fox-speech');
+    const eyelidLeft = document.getElementById('eyelid-left');
+    const eyelidRight = document.getElementById('eyelid-right');
+    const foxMouth = document.getElementById('fox-mouth');
+    const browLeft = document.getElementById('brow-left');
+    const browRight = document.getElementById('brow-right');
+
+    function updatePupils(pointerX, pointerY) {
+      moveSinglePupil(eyeSocketLeft, pupilLeft, pointerX, pointerY);
+      moveSinglePupil(eyeSocketRight, pupilRight, pointerX, pointerY);
+    }
+
+    function moveSinglePupil(socket, pupil, x, y) {
+      if (!socket || !pupil) return;
+      const rect = socket.getBoundingClientRect();
+      const eyeX = rect.left + rect.width / 2;
+      const eyeY = rect.top + rect.height / 2;
+
+      const angle = Math.atan2(y - eyeY, x - eyeX);
+      const dist = Math.min(4, Math.hypot(x - eyeX, y - eyeY) / 15);
+
+      const pupilX = Math.cos(angle) * dist;
+      const pupilY = Math.sin(angle) * dist;
+
+      pupil.setAttribute('transform', `translate(${pupilX}, ${pupilY})`);
+    }
+
+    // Eventos Mouse
+    window.addEventListener('mousemove', (e) => {
+      updatePupils(e.clientX, e.clientY);
+    });
+
+    // Eventos Toque Celular
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) {
+        updatePupils(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    });
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        updatePupils(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    });
+
+    // Fala do Mascote
+    function speakMascot(text) {
+      if (!foxSpeech) return;
+      foxSpeech.innerText = text;
+      setMascotExpression('happy');
+    }
+
+    // Expressões do Mascote (Happy, Neutral, Error)
+    function setMascotExpression(expression) {
+      if (!foxMouth || !browLeft || !browRight) return;
+
+      if (expression === 'happy') {
+        foxMouth.setAttribute('d', 'M52 77Q60 84 68 77');
+        browLeft.setAttribute('d', 'M36 43Q44 40 48 44');
+        browRight.setAttribute('d', 'M84 43Q76 40 72 44');
+      } else if (expression === 'error') {
+        foxMouth.setAttribute('d', 'M54 82Q60 76 66 82');
+        browLeft.setAttribute('d', 'M36 46Q44 42 48 40');
+        browRight.setAttribute('d', 'M84 46Q76 42 72 40');
+      } else {
+        foxMouth.setAttribute('d', 'M54 78Q60 81 66 78');
+        browLeft.setAttribute('d', 'M36 43Q44 41 48 44');
+        browRight.setAttribute('d', 'M84 43Q76 41 72 44');
+      }
+    }
+
+    function blinkFox() {
+      if (!eyelidLeft || !eyelidRight) return;
+      eyelidLeft.setAttribute('ry', '11');
+      eyelidRight.setAttribute('ry', '11');
+      setTimeout(() => {
+        eyelidLeft.setAttribute('ry', '0');
+        eyelidRight.setAttribute('ry', '0');
+      }, 180);
+    }
+    setInterval(blinkFox, 4000);
+
+    function triggerFoxInteraction() {
+      speakMascot("Estou de olho na sua inscrição! Vai dar tudo certo! 🚀");
+      blinkFox();
+      playSound('step');
+    }
+
+
+    // ================= MÁSCARAS DE ENTRADA =================
+    function maskCPF(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      input.value = v;
+    }
+
+    function maskTelefone(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      if (v.length <= 10) {
+        v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        v = v.replace(/(\d{4})(\d)/, '$1-$2');
+      } else {
+        v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+        v = v.replace(/(\d{5})(\d)/, '$1-$2');
+      }
+      input.value = v;
+    }
+
+    function maskCEP(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 8) v = v.slice(0, 8);
+      v = v.replace(/^(\d{5})(\d)/, '$1-$2');
+      input.value = v;
+    }
+
+
+    // ================= CRACHÁ LIVE UPDATE =================
+    function liveUpdateBadge() {
+      const nome = document.getElementById('nome').value.trim();
+      const curso = document.getElementById('nomeCurso').value;
+      const turno = document.querySelector('input[name="turno"]:checked')?.value || '---';
+      const modalidade = document.querySelector('input[name="modalidade"]:checked')?.value || '---';
+
+      // Atualizar Nome
+      const badgeNome = document.getElementById('badge-nome');
+      badgeNome.innerText = nome ? nome : 'Nome do Aluno';
+
+      // Inicial do Avatar
+      const initialsEl = document.getElementById('badge-initials');
+      if (nome) {
+        const parts = nome.split(' ');
+        if (parts.length >= 2) {
+          initialsEl.innerText = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        } else {
+          initialsEl.innerText = nome.slice(0, 2).toUpperCase();
+        }
+      } else {
+        initialsEl.innerText = 'SN';
+      }
+
+      // Atualizar Curso e Turno
+      document.getElementById('badge-curso').innerText = curso ? curso : 'Selecione o Curso SENAI';
+      document.getElementById('badge-turno-mod').innerText = `${turno} / ${modalidade}`;
+    }
+
+
+    // ================= REGRAS DE VALIDAÇÃO REQUERIDAS =================
+
+    // 1. Nome Completo (Nome e Sobrenome, apenas letras e espaços)
+    function validateNome(nome) {
+      const trimmed = nome.trim();
+      const regex = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(\s+[A-Za-zÀ-ÖØ-öø-ÿ]+)+$/;
+      return regex.test(trimmed);
+    }
+
+    // 2. CPF (11 dígitos numéricos, rejeita sequências repetidas, validação de módulo 11)
+    function validateCPF(cpf) {
+      const clean = cpf.replace(/\D/g, '');
+      if (clean.length !== 11) return false;
+      if (/^(\d)\1{10}$/.test(clean)) return false; // Ex: 111.111.111-11
+
+      let sum = 0;
+      for (let i = 0; i < 9; i++) {
+        sum += parseInt(clean.charAt(i)) * (10 - i);
+      }
+      let rev = 11 - (sum % 11);
+      if (rev === 10 || rev === 11) rev = 0;
+      if (rev !== parseInt(clean.charAt(9))) return false;
+
+      sum = 0;
+      for (let i = 0; i < 10; i++) {
+        sum += parseInt(clean.charAt(i)) * (11 - i);
+      }
+      rev = 11 - (sum % 11);
+      if (rev === 10 || rev === 11) rev = 0;
+      if (rev !== parseInt(clean.charAt(10))) return false;
+
+      return true;
+    }
+
+    // 3. Telefone (DDD 2 dígitos + 8 ou 9 dígitos = 10 ou 11 no total)
+    function validateTelefone(tel) {
+      const clean = tel.replace(/\D/g, '');
+      if (clean.length !== 10 && clean.length !== 11) return false;
+      const ddd = parseInt(clean.substring(0, 2));
+      if (ddd < 11 || ddd > 99) return false;
+      return true;
+    }
+
+    // 4. Data de Nascimento (Não pode ser no futuro nem anterior ao ano 1900)
+    function validateDataNascimento(dataStr) {
+      if (!dataStr) return false;
+      const parts = dataStr.split('-');
+      if (parts.length !== 3) return false;
+
+      const year = parseInt(parts[0]);
+      const inputDate = new Date(dataStr + 'T00:00:00');
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
+      if (isNaN(inputDate.getTime())) return false;
+      if (year < 1900) return false;
+      if (inputDate > today) return false;
+
+      return true;
+    }
+
+    // 5. CEP (Exatamente 8 dígitos numéricos)
+    function validateCEP(cep) {
+      const clean = cep.replace(/\D/g, '');
+      return clean.length === 8;
+    }
+
+    // 6. Senha e Confirmação de Senha (Mínimo de 8 caracteres e idênticas)
+    function validateSenha(senha, confirmacao) {
+      if (!senha || senha.length < 8) return false;
+      return senha === confirmacao;
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    }
+
+
+    // ================= VIA CEP INTEGRAÇÃO =================
+    async function checkCEPAutoSearch(input) {
+      const clean = input.value.replace(/\D/g, '');
+      if (clean.length === 8) {
+        document.getElementById('cep-loader').classList.remove('hidden');
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+          const data = await res.json();
+          document.getElementById('cep-loader').classList.add('hidden');
+
+          if (data.erro) {
+            showToast('CEP não encontrado.', 'error');
+            return;
+          }
+
+          document.getElementById('logradouro').value = data.logradouro || '';
+          document.getElementById('bairro').value = data.bairro || '';
+          document.getElementById('cidade').value = data.localidade || '';
+          document.getElementById('estado').value = data.uf || '';
+          document.getElementById('numero').focus();
+
+          speakMascot("Achei seu endereço pelo CEP!");
+          showToast('Endereço preenchido via ViaCEP!', 'success');
+        } catch (e) {
+          document.getElementById('cep-loader').classList.add('hidden');
+        }
+      }
+    }
+
+
+    // ================= NAVEGAÇÃO DE ABAS =================
+    function clearError(errId, inputEl) {
+      const el = document.getElementById(errId);
+      if (el) el.classList.add('hidden');
+      if (inputEl) inputEl.classList.remove('error');
+      setMascotExpression('neutral');
+    }
+
+    function switchTab(tabNum) {
+      // Se for tentar avançar sem validar
+      if (tabNum > currentTab && !validateTabStep(currentTab)) {
+        return;
+      }
+
+      currentTab = tabNum;
+      playSound('step');
+
+      // Alternar Visibilidade das Abas
+      document.querySelectorAll('.tab-content').forEach((el, idx) => {
+        if (idx + 1 === tabNum) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      // Estilizar Botões de Aba
+      for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById(`tab-btn-${i}`);
+        if (i === tabNum) {
+          btn.className = "tab-btn flex-1 min-w-[120px] sm:min-w-[140px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all bg-brand-600 text-white shadow-lg shadow-brand-600/40";
+        } else {
+          btn.className = "tab-btn flex-1 min-w-[120px] sm:min-w-[140px] py-3 px-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all text-brand-200 hover:bg-brand-900/40";
+        }
+      }
+
+      // Atualizar Progresso
+      const progressBar = document.getElementById('progress-bar');
+      const progressText = document.getElementById('progress-text');
+      const pct = Math.round((tabNum / 3) * 100);
+
+      progressBar.style.width = `${pct}%`;
+      progressText.innerText = `Passo ${tabNum} de 3 (${pct}%)`;
+
+      // Visibilidade Botões Próximo / Enviar
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const btnSubmit = document.getElementById('btn-submit');
+
+      if (tabNum === 1) {
+        btnPrev.disabled = true;
+        btnPrev.classList.add('opacity-40', 'cursor-not-allowed');
+      } else {
+        btnPrev.disabled = false;
+        btnPrev.classList.remove('opacity-40', 'cursor-not-allowed');
+      }
+
+      if (tabNum === 3) {
+        btnNext.classList.add('hidden');
+        btnSubmit.classList.remove('hidden');
+      } else {
+        btnNext.classList.remove('hidden');
+        btnSubmit.classList.add('hidden');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function navigateStep(direction) {
+      const next = currentTab + direction;
+      if (next >= 1 && next <= 3) {
+        switchTab(next);
+      }
+    }
+
+
+    // ================= VALIDAÇÃO DOS PASSOS DO FORMULÁRIO =================
+    function validateTabStep(step) {
+      let valid = true;
+
+      const triggerErr = (errId, inputId, msg) => {
+        const errEl = document.getElementById(errId);
+        const inp = document.getElementById(inputId);
+        if (errEl) errEl.classList.remove('hidden');
+        if (inp) inp.classList.add('error');
+        valid = false;
+        playSound('error');
+        setMascotExpression('error');
+        speakMascot(msg);
+        showToast(msg, 'error');
+      };
+
+      if (step === 1) {
+        // Nome
+        const nomeVal = document.getElementById('nome').value;
+        if (!validateNome(nomeVal)) {
+          triggerErr('err-nome', 'nome', "Por favor, informe seu nome completo (nome e sobrenome), apenas letras e espaços");
+          return false;
+        }
+
+        // CPF
+        const cpfVal = document.getElementById('cpf').value;
+        if (!validateCPF(cpfVal)) {
+          triggerErr('err-cpf', 'cpf', "CPF inválido. Verifique os números digitados.");
+          return false;
+        }
+
+        // Data Nascimento
+        const dtVal = document.getElementById('dataNascimento').value;
+        if (!validateDataNascimento(dtVal)) {
+          triggerErr('err-dataNascimento', 'dataNascimento', "Data de nascimento inválida.");
+          return false;
+        }
+
+        // E-mail
+        const emailVal = document.getElementById('email').value;
+        if (!validateEmail(emailVal)) {
+          triggerErr('err-email', 'email', "Por favor, informe um e-mail válido.");
+          return false;
+        }
+
+        // Telefone
+        const telVal = document.getElementById('telefone').value;
+        if (!validateTelefone(telVal)) {
+          triggerErr('err-telefone', 'telefone', "Informe um número de telefone válido com DDD (10 ou 11 dígitos).");
+          return false;
+        }
+
+        // Senha
+        const senhaVal = document.getElementById('senha').value;
+        const confirmVal = document.getElementById('confirmarSenha').value;
+        if (!validateSenha(senhaVal, confirmVal)) {
+          triggerErr('err-senha', 'senha', "As senhas não coincidem ou não possuem o mínimo de 8 caracteres.");
+          return false;
+        }
+      }
+
+      if (step === 2) {
+        // CEP
+        const cepVal = document.getElementById('cep').value;
+        if (!validateCEP(cepVal)) {
+          triggerErr('err-cep', 'cep', "CEP inválido. O CEP deve conter 8 dígitos numéricos.");
+          return false;
+        }
+
+        // Endereço campos
+        const reqs = ['logradouro', 'numero', 'bairro', 'cidade', 'estado'];
+        for (let fieldId of reqs) {
+          const f = document.getElementById(fieldId);
+          if (!f.value.trim()) {
+            f.classList.add('error');
+            showToast('Preencha todos os campos do endereço.', 'error');
+            return false;
+          }
+        }
+      }
+
+      if (step === 3) {
+        const curso = document.getElementById('nomeCurso').value;
+        const turno = document.querySelector('input[name="turno"]:checked');
+        const modalidade = document.querySelector('input[name="modalidade"]:checked');
+
+        if (!curso) {
+          document.getElementById('err-curso').classList.remove('hidden');
+          showToast('Selecione um curso SENAI.', 'error');
+          return false;
+        }
+
+        if (!turno) {
+          document.getElementById('err-turno').classList.remove('hidden');
+          showToast('Selecione o turno.', 'error');
+          return false;
+        }
+
+        if (!modalidade) {
+          document.getElementById('err-modalidade').classList.remove('hidden');
+          showToast('Selecione a modalidade.', 'error');
+          return false;
+        }
+      }
+
+      return valid;
+    }
+
+
+    // ================= ENVIO DO FORMULÁRIO =================
+    function handleFormSubmit(e) {
+      e.preventDefault();
+
+      if (!validateTabStep(1) || !validateTabStep(2) || !validateTabStep(3)) {
+        return;
+      }
+
+      const novoAluno = {
+        id: Date.now(),
+        ra: '2026-' + Math.floor(10000 + Math.random() * 90000),
+        nome: document.getElementById('nome').value.trim(),
+        cpf: document.getElementById('cpf').value,
+        dataNascimento: document.getElementById('dataNascimento').value,
+        email: document.getElementById('email').value.trim(),
+        telefone: document.getElementById('telefone').value,
+        cep: document.getElementById('cep').value,
+        logradouro: document.getElementById('logradouro').value.trim(),
+        numero: document.getElementById('numero').value.trim(),
+        bairro: document.getElementById('bairro').value.trim(),
+        cidade: document.getElementById('cidade').value.trim(),
+        estado: document.getElementById('estado').value,
+        curso: document.getElementById('nomeCurso').value,
+        turno: document.querySelector('input[name="turno"]:checked').value,
+        modalidade: document.querySelector('input[name="modalidade"]:checked').value,
+        dataCadastro: new Date().toLocaleDateString('pt-BR')
+      };
+
+      alunosList.unshift(novoAluno);
+      localStorage.setItem('senai_alunos_db', JSON.stringify(alunosList));
+
+      // Disparar Confetes e Sons de Vitória
+      triggerConfetti();
+      playSound('success');
+      speakMascot("PARABÉNS! Matrícula realizada com sucesso no SENAI! 🎉");
+      showToast('Aluno cadastrado com sucesso!', 'success');
+
+      // Resetar Form
+      document.getElementById('form-cadastro').reset();
+      switchTab(1);
+      liveUpdateBadge();
+      renderAlunosTable();
+    }
+
+
+    // ================= ANIMAÇÃO DE CONFETES EM CANVAS =================
+    function triggerConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#38bdf8', '#34d399', '#f472b6'];
+
+      for (let i = 0; i < 120; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vy: Math.random() * 4 + 2,
+          vx: Math.random() * 2 - 1,
+          rot: Math.random() * 360
+        });
+      }
+
+      let animationFrame;
+      let timer = 0;
+
+      function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        timer++;
+
+        particles.forEach(p => {
+          p.y += p.vy;
+          p.x += p.vx;
+          p.rot += 4;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+
+        if (timer < 180) {
+          animationFrame = requestAnimationFrame(loop);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          cancelAnimationFrame(animationFrame);
+        }
+      }
+
+      loop();
+    }
+
+
+    // ================= TABELA DE ALUNOS =================
+    function renderAlunosTable(filtered = null) {
+      const tbody = document.getElementById('alunos-table-body');
+      const data = filtered || alunosList;
+
+      if (data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="p-8 text-center text-slate-400">
+              <i class="fa-solid fa-folder-open text-3xl mb-2 text-brand-400/40 block"></i>
+              Nenhum aluno cadastrado até o momento.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = data.map(aluno => `
+        <tr class="hover:bg-brand-900/20 transition-all">
+          <td class="p-3 sm:p-4 font-semibold text-white">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-brand-600/40 text-brand-200 flex items-center justify-center font-bold text-xs border border-brand-500/30">
+                ${aluno.nome.charAt(0)}
+              </div>
+              <span class="truncate max-w-[140px] sm:max-w-[200px]">${aluno.nome}</span>
+            </div>
+          </td>
+          <td class="p-3 sm:p-4 text-slate-300 font-mono text-xs">${aluno.cpf}</td>
+          <td class="p-3 sm:p-4 text-slate-300">
+            <span class="block font-medium truncate max-w-[180px]">${aluno.curso}</span>
+            <span class="text-[10px] text-brand-300 bg-brand-950 px-2 py-0.5 rounded-full inline-block mt-0.5 border border-brand-500/20">
+              ${aluno.turno} | ${aluno.modalidade}
+            </span>
+          </td>
+          <td class="p-3 sm:p-4 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="viewAlunoDetails(${aluno.id})" type="button" class="p-2 rounded-xl bg-brand-600/30 hover:bg-brand-600 text-brand-200 hover:text-white transition-all" title="Ver Detalhes">
+                <i class="fa-solid fa-eye text-xs"></i>
+              </button>
+              <button onclick="deleteAluno(${aluno.id})" type="button" class="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white transition-all" title="Remover">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterAlunosTable() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const filtered = alunosList.filter(a => 
+        a.nome.toLowerCase().includes(query) || a.cpf.includes(query)
+      );
+      renderAlunosTable(filtered);
+    }
+
+    function deleteAluno(id) {
+      if (confirm('Deseja realmente excluir este cadastro?')) {
+        alunosList = alunosList.filter(a => a.id !== id);
+        localStorage.setItem('senai_alunos_db', JSON.stringify(alunosList));
+        renderAlunosTable();
+        showToast('Aluno removido com sucesso.', 'info');
+      }
+    }
+
+    function viewAlunoDetails(id) {
+      const aluno = alunosList.find(a => a.id === id);
+      if (!aluno) return;
+
+      document.getElementById('modal-nome').innerText = aluno.nome;
+      document.getElementById('modal-curso').innerText = aluno.curso;
+      document.getElementById('modal-cpf').innerText = aluno.cpf;
+      document.getElementById('modal-nasc').innerText = aluno.dataNascimento.split('-').reverse().join('/');
+      document.getElementById('modal-telefone').innerText = aluno.telefone;
+      document.getElementById('modal-email').innerText = aluno.email;
+      document.getElementById('modal-endereco').innerText = `${aluno.logradouro}, Nº ${aluno.numero} - ${aluno.bairro}, ${aluno.cidade} - ${aluno.estado} (CEP: ${aluno.cep})`;
+      document.getElementById('modal-turno').innerText = aluno.turno;
+      document.getElementById('modal-modalidade').innerText = aluno.modalidade;
+
+      document.getElementById('details-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('details-modal').classList.add('hidden');
+    }
+
+    // Modal Flutuante Crachá Mobile
+    function toggleMobileBadgeDrawer() {
+      const drawer = document.getElementById('mobile-badge-drawer');
+      const container = document.getElementById('mobile-badge-container');
+      const badgeAside = document.getElementById('badge-aside');
+
+      if (drawer.classList.contains('hidden')) {
+        container.innerHTML = badgeAside.innerHTML;
+        drawer.classList.remove('hidden');
+      } else {
+        drawer.classList.add('hidden');
+        container.innerHTML = '';
+      }
+    }
+
+
+    // ================= TOAST NOTIFICAÇÃO =================
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.innerText = msg;
+
+      if (type === 'error') {
+        toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold bg-rose-950 text-rose-200 border border-rose-500/50 transition-all duration-300 opacity-100 translate-y-0";
+        toastIcon.className = "fa-solid fa-triangle-exclamation text-rose-400 text-base";
+      } else if (type === 'success') {
+        toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold bg-emerald-950 text-emerald-200 border border-emerald-500/50 transition-all duration-300 opacity-100 translate-y-0";
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400 text-base";
+      } else {
+        toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold bg-brand-950 text-brand-200 border border-brand-500/50 transition-all duration-300 opacity-100 translate-y-0";
+        toastIcon.className = "fa-solid fa-circle-info text-brand-400 text-base";
+      }
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-10');
+      }, 4000);
+    }
+
+
+    // INICIALIZAÇÃO DA PÁGINA
+    window.onload = function() {
+      renderAlunosTable();
+      liveUpdateBadge();
+    };
+  </script>
+</body>
+</html>
